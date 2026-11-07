@@ -3,7 +3,9 @@ export type Network = "testnet" | "mainnet";
 export const NETWORK: Network =
   process.env.NEXT_PUBLIC_NEAR_NETWORK === "mainnet" ? "mainnet" : "testnet";
 
-export const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID ?? "portwell.testnet";
+// No default on purpose: a default account we do not control could be claimed by someone else.
+export const CONTRACT_ID = process.env.NEXT_PUBLIC_CONTRACT_ID ?? "";
+export const CONTRACT_CONFIGURED = CONTRACT_ID.length > 0;
 
 // Public RPC endpoints. Verify current URLs at https://docs.near.org/api/rpc/providers
 export const RPC_URL =

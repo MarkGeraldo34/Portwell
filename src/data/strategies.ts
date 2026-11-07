@@ -18,7 +18,7 @@ export interface Strategy {
 export const STRATEGIES: Strategy[] = [
   {
     id: "demo-1",
-    sharer: "demo-sharer-one.testnet",
+    sharer: "portwell-sharer-babyboi34.testnet",
     title: "Example: stake NEAR with a validator",
     summary: "Placeholder post showing the template. Replace with a strategy you have run yourself.",
     steps: ["Create a wallet", "Pick a validator", "Stake a small amount", "Check rewards weekly"],
@@ -29,7 +29,7 @@ export const STRATEGIES: Strategy[] = [
   },
   {
     id: "demo-2",
-    sharer: "demo-sharer-two.testnet",
+    sharer: "portwell-sharer-babyboi34.testnet",
     title: "Example: complete testnet quests",
     summary: "Placeholder post. Testnet tasks cost no real money but may not pay anything.",
     steps: ["Get testnet funds from a faucet", "Follow the quest list", "Record each transaction"],

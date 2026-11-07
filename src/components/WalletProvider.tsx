@@ -4,9 +4,10 @@ import "@near-wallet-selector/modal-ui/styles.css";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { setupWalletSelector, type WalletSelector } from "@near-wallet-selector/core";
 import { setupModal, type WalletSelectorModal } from "@near-wallet-selector/modal-ui";
+import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
 import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
 import { actionCreators } from "@near-js/transactions";
-import { CONTRACT_ID, NETWORK } from "@/lib/config";
+import { CONTRACT_ID, CONTRACT_CONFIGURED, NETWORK } from "@/lib/config";
 
 const GAS = 100_000_000_000_000n; // 100 Tgas
 
@@ -35,9 +36,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let sub: { unsubscribe: () => void } | undefined;
     (async () => {
-      const s = await setupWalletSelector({ network: NETWORK, modules: [setupMyNearWallet()] });
+      const s = await setupWalletSelector({ network: NETWORK, modules: [setupMeteorWallet(), setupMyNearWallet()] });
       setSelector(s);
-      setModal(setupModal(s, { contractId: CONTRACT_ID }));
+      setModal(setupModal(s, { contractId: CONTRACT_CONFIGURED ? CONTRACT_ID : `unset.${NETWORK === "mainnet" ? "near" : "testnet"}` }));
       const sync = () => setAccountId(s.store.getState().accounts.find((a) => a.active)?.accountId ?? null);
       sync();
       sub = s.store.observable.subscribe(sync);
@@ -54,6 +55,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const call = useCallback(
     async (method: string, args: object = {}, deposit = 0n) => {
       if (!selector) throw new Error("Wallet not ready");
+      if (!CONTRACT_CONFIGURED) throw new Error("Payments are disabled: no contract is configured yet");
       const wallet = await selector.wallet();
       await wallet.signAndSendTransaction({
         receiverId: CONTRACT_ID,

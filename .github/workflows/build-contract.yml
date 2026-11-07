@@ -1,0 +1,38 @@
+name: Build contract
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - "portwell/contract/**"
+      - ".github/workflows/build-contract.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust with the wasm target
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-unknown-unknown
+
+      - name: Install cargo-near
+        run: curl --proto '=https' --tlsv1.2 -LsSf https://github.com/near/cargo-near/releases/latest/download/cargo-near-installer.sh | sh
+
+      - name: Run unit tests
+        working-directory: portwell/contract
+        run: cargo test
+
+      - name: Build wasm
+        working-directory: portwell/contract
+        run: cargo near build non-reproducible-wasm
+
+      - name: Upload wasm
+        uses: actions/upload-artifact@v4
+        with:
+          name: portwell-escrow-wasm
+          path: portwell/contract/target/near/*.wasm
+          if-no-files-found: error

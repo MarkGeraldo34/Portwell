@@ -3,6 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 import { WalletProvider } from "@/components/WalletProvider";
 import { ConnectButton } from "@/components/ConnectButton";
+import { CONTRACT_CONFIGURED } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "PORTWELL",
@@ -28,6 +29,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               Peer-shared education, not financial advice. Sharers are independent peers. Returns are never
               guaranteed. Payments are held in NEAR escrow and released weekly.
             </p>
+            {!CONTRACT_CONFIGURED && (
+              <p className="banner" role="alert">
+                Demo mode: no escrow contract is configured, so subscriptions and payments are disabled.
+              </p>
+            )}
             {children}
           </main>
         </WalletProvider>

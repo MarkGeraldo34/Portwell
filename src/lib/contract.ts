@@ -1,4 +1,4 @@
-import { RPC_URL, CONTRACT_ID, YOCTO_PER_NEAR } from "./config";
+import { RPC_URL, CONTRACT_ID, CONTRACT_CONFIGURED, YOCTO_PER_NEAR } from "./config";
 
 export type Status = "Active" | "Completed" | "Cancelled" | "Disputed" | "Resolved";
 
@@ -21,6 +21,7 @@ export interface SharerStats {
 
 /** Read-only contract call over JSON-RPC. No wallet needed. */
 export async function view<T>(method: string, args: object = {}): Promise<T> {
+  if (!CONTRACT_CONFIGURED) throw new Error("Contract not configured");
   const res = await fetch(RPC_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json" },

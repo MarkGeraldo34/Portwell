@@ -16,8 +16,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <WalletProvider>
           <header>
-            <Link href="/">
-              <strong>PORTWELL</strong>
+            <Link href="/" aria-label="PORTWELL home" style={{ display: "inline-flex", alignItems: "center" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="PORTWELL" width={40} height={40} />
             </Link>
             <nav className="row">
               <Link href="/subscriptions">My subscriptions</Link>

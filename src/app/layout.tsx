@@ -32,10 +32,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </nav>
           </header>
           <main>
-            <p className="banner">
-              Peer-shared education, not financial advice. Sharers are independent peers. Returns are never
-              guaranteed. Payments are held in NEAR escrow and released weekly.
-            </p>
             {!CONTRACT_CONFIGURED && (
               <p className="banner" role="alert">
                 Demo mode: no escrow contract is configured, so subscriptions and payments are disabled.

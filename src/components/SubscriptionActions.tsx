@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
+import { ReleaseTimeline, maturedWeeks } from "./ReleaseTimeline";
 import { formatNear, getOwner, getSubscription, listSubscriptionsFor, type SubscriptionView } from "@/lib/contract";
 
 type Act = { method: "release_due" | "cancel" | "dispute" } | { method: "resolve_dispute"; favorLearner: boolean };
@@ -45,11 +46,19 @@ function Row({
         <br />
         {progress(sub)}
       </p>
+      <ReleaseTimeline sub={sub} />
       {open && (
         <span className="row">
-          <button className="btn" onClick={() => onAct({ method: "release_due" }, sub.id)}>
-            Release due
-          </button>
+          {sub.sharer === me && (
+            <button
+              className="btn"
+              disabled={maturedWeeks(sub) * 1 <= 0 || BigInt(sub.total) * BigInt(maturedWeeks(sub)) / 4n <= BigInt(sub.released)}
+              title="Collect the weekly parts that have matured"
+              onClick={() => onAct({ method: "release_due" }, sub.id)}
+            >
+              Claim matured weeks
+            </button>
+          )}
           {isLearner && (
             <>
               <button className="btn ghost" onClick={() => onAct({ method: "cancel" }, sub.id)}>

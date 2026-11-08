@@ -13,9 +13,6 @@ export default function Home() {
   return (
     <>
       <h1>Learn to earn crypto from people who have done it</h1>
-      <p className="muted">
-        Every strategy uses the same template: steps, capital needed, risk level and the wallet that ran it. Steps, risks and the proof wallet unlock when you subscribe.
-      </p>
       {visible.map(({ s, risk }) => (
         <article className="card" key={s.id}>
           <div className="row">

@@ -6,6 +6,23 @@ import { formatNear, getOwner, getSubscription, listSubscriptionsFor, type Subsc
 
 type Act = { method: "release_due" | "cancel" | "dispute" } | { method: "resolve_dispute"; favorLearner: boolean };
 
+/** Settled subscriptions mark everything as processed, so show the outcome instead of "released x of x". */
+function progress(sub: SubscriptionView): string {
+  const total = `${formatNear(sub.total)} NEAR`;
+  switch (sub.status) {
+    case "Completed":
+      return `Paid out in full: ${total} released to the sharer`;
+    case "Cancelled":
+      return `Settled on cancel: matured weeks paid to the sharer, the rest refunded (${total} total)`;
+    case "Resolved":
+      return `Settled by the owner: unreleased funds went to one side (${total} total)`;
+    case "Disputed":
+      return `Releases paused: ${formatNear(sub.total)} NEAR held until the owner resolves`;
+    default:
+      return `Released ${formatNear(sub.released)} of ${total}`;
+  }
+}
+
 function Row({
   sub,
   me,
@@ -26,7 +43,7 @@ function Row({
         <br />
         {sub.learner} → {sub.sharer}
         <br />
-        Released {formatNear(sub.released)} of {formatNear(sub.total)} NEAR
+        {progress(sub)}
       </p>
       {open && (
         <span className="row">

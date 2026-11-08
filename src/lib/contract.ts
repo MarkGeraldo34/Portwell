@@ -1,4 +1,4 @@
-import { RPC_URL, CONTRACT_ID, CONTRACT_CONFIGURED, YOCTO_PER_NEAR } from "./config";
+import { RPC_URLS, CONTRACT_ID, CONTRACT_CONFIGURED, YOCTO_PER_NEAR } from "./config";
 
 export type Status = "Active" | "Completed" | "Cancelled" | "Disputed" | "Resolved";
 
@@ -19,32 +19,46 @@ export interface SharerStats {
   disputes: number;
 }
 
-/** Read-only contract call over JSON-RPC. No wallet needed. */
+/** Read-only contract call over JSON-RPC, trying each public server until one answers. */
 export async function view<T>(method: string, args: object = {}): Promise<T> {
   if (!CONTRACT_CONFIGURED) throw new Error("Contract not configured");
-  const res = await fetch(RPC_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: "portwell",
-      method: "query",
-      params: {
-        request_type: "call_function",
-        finality: "optimistic",
-        account_id: CONTRACT_ID,
-        method_name: method,
-        args_base64: btoa(JSON.stringify(args)),
-      },
-    }),
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    id: "portwell",
+    method: "query",
+    params: {
+      request_type: "call_function",
+      finality: "optimistic",
+      account_id: CONTRACT_ID,
+      method_name: method,
+      args_base64: btoa(JSON.stringify(args)),
+    },
   });
-  const json = await res.json();
-  if (json.error || json.result?.error) {
-    throw new Error(json.result?.error ?? json.error?.data ?? "RPC error");
+
+  let lastError = "No RPC server reachable";
+  for (const url of RPC_URLS) {
+    try {
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+      if (!res.ok) {
+        lastError = `RPC ${url} returned ${res.status}`;
+        continue;
+      }
+      const json = await res.json();
+      if (json.error || json.result?.error) {
+        // The server answered but the call failed (for example an unknown account): do not retry elsewhere.
+        throw new ContractCallError(String(json.result?.error ?? JSON.stringify(json.error?.data ?? json.error)));
+      }
+      const bytes = Uint8Array.from(json.result.result as number[]);
+      return JSON.parse(new TextDecoder().decode(bytes)) as T;
+    } catch (e) {
+      if (e instanceof ContractCallError) throw e;
+      lastError = `Could not reach ${url}`;
+    }
   }
-  const bytes = Uint8Array.from(json.result.result as number[]);
-  return JSON.parse(new TextDecoder().decode(bytes)) as T;
+  throw new Error(lastError);
 }
+
+class ContractCallError extends Error {}
 
 export const getPrice = (sharer: string) => view<string | null>("get_price", { sharer });
 export const getStats = (sharer: string) => view<SharerStats>("get_sharer_stats", { sharer });

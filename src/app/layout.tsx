@@ -1,34 +1,46 @@
+import type { Metadata } from "next";
 import Link from "next/link";
-import { STRATEGIES } from "@/data/strategies";
-import { SetPriceForm } from "@/components/SetPriceForm";
-import { PostChecker } from "@/components/PostChecker";
-import { VerdictTag } from "@/components/RiskPanel";
-import { scanPost } from "@/lib/risk";
-import { riskInputFor, stepCount } from "@/server/strategy-content";
+import "./globals.css";
+import { WalletProvider } from "@/components/WalletProvider";
+import { ConnectButton } from "@/components/ConnectButton";
+import { CONTRACT_CONFIGURED } from "@/lib/config";
 
-export default function Home() {
-  const scanned = STRATEGIES.map((s) => ({ s, risk: scanPost(riskInputFor(s)) }));
-  const visible = scanned.filter((x) => x.risk.verdict !== "block");
-  const hidden = scanned.length - visible.length;
+export const metadata: Metadata = {
+  title: "PORTWELL",
+  description: "Learn ways to earn crypto from peers who have done it, paid monthly through NEAR escrow.",
+};
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      <h1>Learn to earn crypto from people who have done it</h1>
-      {visible.map(({ s, risk }) => (
-        <article className="card" key={s.id}>
-          <div className="row">
-            <h3 style={{ margin: 0 }}>{s.title}</h3>
-            <span className="tag">risk: {s.risk}</span>
-            <span className="tag">capital: {s.capitalNeededNear} NEAR</span>
-            <VerdictTag verdict={risk.verdict} />
-          </div>
-          <p>{s.summary}</p>
-          <p className="muted">By {s.sharer} · {stepCount(s.id)} steps (locked)</p>
-          <Link href={`/sharers/${s.sharer}`}>View sharer and subscribe</Link>
-        </article>
-      ))}
-      {hidden > 0 && <p className="muted">{hidden} post(s) hidden by the scam check.</p>}
-      <PostChecker />
-      <SetPriceForm />
-    </>
+    <html lang="en">
+      <body>
+        <WalletProvider>
+          <header>
+            <Link href="/" aria-label="PORTWELL home" style={{ display: "inline-flex", alignItems: "center" }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo.png"
+                alt="PORTWELL"
+                width={64}
+                height={64}
+                style={{ filter: "brightness(1.35) saturate(1.25) drop-shadow(0 0 10px rgba(217,47,84,.55)) drop-shadow(0 0 18px rgba(59,120,255,.35))" }}
+              />
+            </Link>
+            <nav className="row">
+              <Link href="/subscriptions">My subscriptions</Link>
+              <ConnectButton />
+            </nav>
+          </header>
+          <main>
+            {!CONTRACT_CONFIGURED && (
+              <p className="banner" role="alert">
+                Demo mode: no escrow contract is configured, so subscriptions and payments are disabled.
+              </p>
+            )}
+            {children}
+          </main>
+        </WalletProvider>
+      </body>
+    </html>
   );
 }

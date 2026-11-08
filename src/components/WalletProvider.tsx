@@ -2,7 +2,8 @@
 
 import "@near-wallet-selector/modal-ui/styles.css";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { setupWalletSelector, type WalletSelector } from "@near-wallet-selector/core";
+import { setupWalletSelector, type SignedMessage, type WalletSelector } from "@near-wallet-selector/core";
+import type { Buffer } from "buffer";
 import { setupModal, type WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
 import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
@@ -18,6 +19,8 @@ interface WalletCtx {
   signOut: () => Promise<void>;
   /** Sign and send one function call to the escrow contract. */
   call: (method: string, args?: object, depositYocto?: bigint) => Promise<void>;
+  /** Ask the wallet to sign a NEP-413 message, proving the user controls the account. */
+  signMessage: (params: { message: string; recipient: string; nonce: Buffer }) => Promise<SignedMessage>;
 }
 
 const Ctx = createContext<WalletCtx | null>(null);
@@ -65,8 +68,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [selector],
   );
 
+  const signMessage = useCallback(
+    async (params: { message: string; recipient: string; nonce: Buffer }) => {
+      if (!selector) throw new Error("Wallet not ready");
+      const wallet = await selector.wallet();
+      if (!wallet.signMessage) throw new Error("This wallet cannot sign messages. Try another wallet.");
+      const signed = await wallet.signMessage(params);
+      if (!signed) throw new Error("The wallet did not return a signature");
+      return signed;
+    },
+    [selector],
+  );
+
   return (
-    <Ctx.Provider value={{ accountId, ready: !!selector, signIn: () => modal?.show(), signOut, call }}>
+    <Ctx.Provider value={{ accountId, ready: !!selector, signIn: () => modal?.show(), signOut, call, signMessage }}>
       {children}
     </Ctx.Provider>
   );

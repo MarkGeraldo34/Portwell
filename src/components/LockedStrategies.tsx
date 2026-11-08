@@ -67,7 +67,7 @@ export function LockedStrategies({ sharer, teasers }: { sharer: string; teasers:
           <p>
             <strong>Locked.</strong> Steps, risk notes and the proof wallet are shown only to active subscribers.
           </p>
-          <button onClick={unlock} disabled={busy}>
+          <button className="btn" onClick={unlock} disabled={busy}>
             {accountId ? "Unlock with wallet" : "Connect wallet to unlock"}
           </button>
           {msg && <p className="muted">{msg}</p>}

@@ -18,7 +18,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <header>
             <Link href="/" aria-label="PORTWELL home" style={{ display: "inline-flex", alignItems: "center" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="PORTWELL" width={40} height={40} />
+              <img
+                src="/logo.png"
+                alt="PORTWELL"
+                width={64}
+                height={64}
+                style={{ filter: "brightness(1.35) saturate(1.25) drop-shadow(0 0 10px rgba(217,47,84,.55)) drop-shadow(0 0 18px rgba(59,120,255,.35))" }}
+              />
             </Link>
             <nav className="row">
               <Link href="/subscriptions">My subscriptions</Link>

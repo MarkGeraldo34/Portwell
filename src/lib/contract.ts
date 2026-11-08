@@ -65,6 +65,24 @@ export const getStats = (sharer: string) => view<SharerStats>("get_sharer_stats"
 export const getSubscription = (id: number) =>
   view<SubscriptionView | null>("get_subscription", { id });
 
+/**
+ * The contract has no "list by account" call, but ids are sequential from 0, so scan ids in small
+ * batches until the first missing one and keep the subscriptions that involve `account`.
+ */
+export async function listSubscriptionsFor(account: string, max = 300): Promise<SubscriptionView[]> {
+  const found: SubscriptionView[] = [];
+  const BATCH = 8;
+  for (let start = 0; start < max; start += BATCH) {
+    const ids = Array.from({ length: BATCH }, (_, i) => start + i);
+    const subs = await Promise.all(ids.map((id) => getSubscription(id)));
+    for (const sub of subs) {
+      if (sub && (sub.learner === account || sub.sharer === account)) found.push(sub);
+    }
+    if (subs.some((sub) => sub === null)) break; // ids are sequential: first gap means the end
+  }
+  return found;
+}
+
 export function formatNear(yocto: string | bigint, digits = 2): string {
   const v = typeof yocto === "bigint" ? yocto : BigInt(yocto);
   const whole = v / YOCTO_PER_NEAR;

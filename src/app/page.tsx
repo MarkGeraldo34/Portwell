@@ -4,16 +4,17 @@ import { SetPriceForm } from "@/components/SetPriceForm";
 import { PostChecker } from "@/components/PostChecker";
 import { VerdictTag } from "@/components/RiskPanel";
 import { scanPost } from "@/lib/risk";
+import { riskInputFor, stepCount } from "@/server/strategy-content";
 
 export default function Home() {
-  const scanned = STRATEGIES.map((s) => ({ s, risk: scanPost(s) }));
+  const scanned = STRATEGIES.map((s) => ({ s, risk: scanPost(riskInputFor(s)) }));
   const visible = scanned.filter((x) => x.risk.verdict !== "block");
   const hidden = scanned.length - visible.length;
   return (
     <>
       <h1>Learn to earn crypto from people who have done it</h1>
       <p className="muted">
-        Every strategy uses the same template: steps, capital needed, risk level and the wallet that ran it.
+        Every strategy uses the same template: steps, capital needed, risk level and the wallet that ran it. Steps, risks and the proof wallet unlock when you subscribe.
       </p>
       {visible.map(({ s, risk }) => (
         <article className="card" key={s.id}>
@@ -24,7 +25,7 @@ export default function Home() {
             <VerdictTag verdict={risk.verdict} />
           </div>
           <p>{s.summary}</p>
-          <p className="muted">By {s.sharer}</p>
+          <p className="muted">By {s.sharer} · {stepCount(s.id)} steps (locked)</p>
           <Link href={`/sharers/${s.sharer}`}>View sharer and subscribe</Link>
         </article>
       ))}

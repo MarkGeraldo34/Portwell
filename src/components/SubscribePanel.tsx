@@ -9,9 +9,15 @@ export function SubscribePanel({ sharer }: { sharer: string }) {
   const [price, setPrice] = useState<string | null | undefined>(undefined);
   const [stats, setStats] = useState<SharerStats | null>(null);
   const [msg, setMsg] = useState("");
+  const [loadError, setLoadError] = useState("");
 
   useEffect(() => {
-    getPrice(sharer).then(setPrice).catch(() => setPrice(null));
+    getPrice(sharer)
+      .then(setPrice)
+      .catch((e: unknown) => {
+        setPrice(null);
+        setLoadError(e instanceof Error ? e.message : "Could not load the price");
+      });
     getStats(sharer).then(setStats).catch(() => setStats(null));
   }, [sharer]);
 
@@ -30,7 +36,8 @@ export function SubscribePanel({ sharer }: { sharer: string }) {
     <section className="card">
       <h3>Monthly subscription</h3>
       {price === undefined && <p>Loading price…</p>}
-      {price === null && <p>This sharer has not set a price yet.</p>}
+      {price === null && loadError && <p role="alert">Could not load the price: {loadError}</p>}
+      {price === null && !loadError && <p>This sharer has not set a price yet.</p>}
       {price && (
         <p>
           <strong>{formatNear(price)} NEAR</strong> per 30 days, held in escrow and released in four weekly

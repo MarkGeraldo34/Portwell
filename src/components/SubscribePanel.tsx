@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
-import { formatNear, getPrice, getStats, type SharerStats } from "@/lib/contract";
+import { formatNear, getPrice, getStats, listSubscriptionsFor, type SharerStats } from "@/lib/contract";
 
 export function SubscribePanel({ sharer }: { sharer: string }) {
   const { accountId, call, signIn } = useWallet();
@@ -10,6 +10,23 @@ export function SubscribePanel({ sharer }: { sharer: string }) {
   const [stats, setStats] = useState<SharerStats | null>(null);
   const [msg, setMsg] = useState("");
   const [loadError, setLoadError] = useState("");
+  const [subscribed, setSubscribed] = useState(false);
+  const [sending, setSending] = useState(false);
+
+  // Is the connected learner already actively subscribed to this sharer?
+  useEffect(() => {
+    setSubscribed(false);
+    if (!accountId) return;
+    let cancelled = false;
+    listSubscriptionsFor(accountId)
+      .then((subs) => {
+        if (!cancelled) setSubscribed(subs.some((x) => x.learner === accountId && x.sharer === sharer && x.status === "Active"));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, sharer]);
 
   useEffect(() => {
     getPrice(sharer)
@@ -22,13 +39,17 @@ export function SubscribePanel({ sharer }: { sharer: string }) {
   }, [sharer]);
 
   async function subscribe() {
-    if (!price) return;
+    if (!price || sending || subscribed) return;
+    setSending(true);
     setMsg("Waiting for wallet approval…");
     try {
       await call("subscribe", { sharer }, BigInt(price));
+      setSubscribed(true);
       setMsg("Sent. Funds are held in escrow and released weekly. Open My subscriptions and press Refresh to see it.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Transaction failed");
+    } finally {
+      setSending(false);
     }
   }
 
@@ -51,8 +72,8 @@ export function SubscribePanel({ sharer }: { sharer: string }) {
       )}
       {price &&
         (accountId ? (
-          <button className="btn" onClick={() => void subscribe()}>
-            Subscribe
+          <button className="btn" onClick={() => void subscribe()} disabled={subscribed || sending} style={subscribed || sending ? { opacity: 0.5, cursor: "not-allowed" } : undefined}>
+            {subscribed ? "Subscribed ✓" : sending ? "Subscribing…" : "Subscribe"}
           </button>
         ) : (
           <button className="btn" onClick={signIn}>

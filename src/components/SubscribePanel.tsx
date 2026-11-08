@@ -26,7 +26,7 @@ export function SubscribePanel({ sharer }: { sharer: string }) {
     setMsg("Waiting for wallet approval…");
     try {
       await call("subscribe", { sharer }, BigInt(price));
-      setMsg("Subscribed. Funds are held in escrow and released weekly.");
+      setMsg("Sent. Funds are held in escrow and released weekly. Open My subscriptions and press Refresh to see it.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Transaction failed");
     }

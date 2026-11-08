@@ -1,146 +1,102 @@
-"use client";
+import { RPC_URLS, CONTRACT_ID, CONTRACT_CONFIGURED, YOCTO_PER_NEAR } from "./config";
 
-import { useCallback, useEffect, useState } from "react";
-import { useWallet } from "./WalletProvider";
-import { formatNear, getOwner, getSubscription, listSubscriptionsFor, type SubscriptionView } from "@/lib/contract";
+export type Status = "Active" | "Completed" | "Cancelled" | "Disputed" | "Resolved";
 
-type Act = { method: "release_due" | "cancel" | "dispute" } | { method: "resolve_dispute"; favorLearner: boolean };
-
-function Row({
-  sub,
-  me,
-  isOwner,
-  onAct,
-}: {
-  sub: SubscriptionView;
-  me: string;
-  isOwner: boolean;
-  onAct: (a: Act, id: string) => void;
-}) {
-  const isLearner = sub.learner === me;
-  const open = sub.status === "Active";
-  return (
-    <div className="card">
-      <p>
-        <strong>#{sub.id}</strong> · {sub.status}
-        <br />
-        {sub.learner} → {sub.sharer}
-        <br />
-        Released {formatNear(sub.released)} of {formatNear(sub.total)} NEAR
-      </p>
-      {open && (
-        <span className="row">
-          <button className="btn" onClick={() => onAct({ method: "release_due" }, sub.id)}>
-            Release due
-          </button>
-          {isLearner && (
-            <>
-              <button className="btn ghost" onClick={() => onAct({ method: "cancel" }, sub.id)}>
-                Cancel
-              </button>
-              <button className="btn ghost" onClick={() => onAct({ method: "dispute" }, sub.id)}>
-                Dispute
-              </button>
-            </>
-          )}
-        </span>
-      )}
-      {isOwner && sub.status === "Disputed" && (
-        <span className="row">
-          <button className="btn" onClick={() => onAct({ method: "resolve_dispute", favorLearner: true }, sub.id)}>
-            Resolve: refund learner
-          </button>
-          <button className="btn ghost" onClick={() => onAct({ method: "resolve_dispute", favorLearner: false }, sub.id)}>
-            Resolve: pay sharer
-          </button>
-        </span>
-      )}
-    </div>
-  );
+export interface SubscriptionView {
+  id: string;
+  learner: string;
+  sharer: string;
+  total: string;
+  released: string;
+  start_ns: string;
+  status: Status;
 }
 
-export function SubscriptionActions() {
-  const { accountId, call, signIn } = useWallet();
-  const [subs, setSubs] = useState<SubscriptionView[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState("");
-  const [owner, setOwner] = useState<string | null>(null);
-  const [lookupId, setLookupId] = useState("0");
-  const [looked, setLooked] = useState<SubscriptionView | null | undefined>(undefined);
+export interface SharerStats {
+  subscriptions: number;
+  distinct_payers: number;
+  renewals: number;
+  disputes: number;
+}
 
-  const refresh = useCallback(async () => {
-    if (!accountId) return;
-    setLoading(true);
+/** Read-only contract call over JSON-RPC, trying each public server until one answers. */
+export async function view<T>(method: string, args: object = {}): Promise<T> {
+  if (!CONTRACT_CONFIGURED) throw new Error("Contract not configured");
+  const body = JSON.stringify({
+    jsonrpc: "2.0",
+    id: "portwell",
+    method: "query",
+    params: {
+      request_type: "call_function",
+      finality: "optimistic",
+      account_id: CONTRACT_ID,
+      method_name: method,
+      args_base64: btoa(JSON.stringify(args)),
+    },
+  });
+
+  let lastError = "No RPC server reachable";
+  for (const url of RPC_URLS) {
     try {
-      const o = await getOwner().catch(() => null);
-      setOwner(o);
-      setSubs(await listSubscriptionsFor(accountId, { includeAll: o === accountId }));
-      setMsg("");
+      const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body });
+      if (!res.ok) {
+        lastError = `RPC ${url} returned ${res.status}`;
+        continue;
+      }
+      const json = await res.json();
+      if (json.error || json.result?.error) {
+        // The server answered but the call failed (for example an unknown account): do not retry elsewhere.
+        throw new ContractCallError(String(json.result?.error ?? JSON.stringify(json.error?.data ?? json.error)));
+      }
+      const bytes = Uint8Array.from(json.result.result as number[]);
+      return JSON.parse(new TextDecoder().decode(bytes)) as T;
     } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Could not load subscriptions");
-    } finally {
-      setLoading(false);
-    }
-  }, [accountId]);
-
-  useEffect(() => {
-    void refresh();
-  }, [refresh]);
-
-  async function act(a: Act, id: string) {
-    setMsg("Waiting for wallet approval…");
-    try {
-      const args = a.method === "resolve_dispute" ? { id: Number(id), favor_learner: a.favorLearner } : { id: Number(id) };
-      await call(a.method, args);
-      setMsg(`${a.method} sent. Refreshing…`);
-      setTimeout(() => void refresh(), 3000);
-    } catch (e) {
-      setMsg(e instanceof Error ? e.message : "Transaction failed");
+      if (e instanceof ContractCallError) throw e;
+      lastError = `Could not reach ${url}`;
     }
   }
+  throw new Error(lastError);
+}
 
-  if (!accountId) {
-    return (
-      <section className="card">
-        <p>Connect your wallet to see your subscriptions.</p>
-        <button className="btn" onClick={signIn}>
-          Connect wallet
-        </button>
-      </section>
-    );
+class ContractCallError extends Error {}
+
+export const getPrice = (sharer: string) => view<string | null>("get_price", { sharer });
+export const getStats = (sharer: string) => view<SharerStats>("get_sharer_stats", { sharer });
+export const getOwner = () => view<string>("get_owner");
+export const getSubscription = (id: number) =>
+  view<SubscriptionView | null>("get_subscription", { id });
+
+/**
+ * The contract has no "list by account" call, but ids are sequential from 0, so scan ids in small
+ * batches until the first missing one and keep the subscriptions that involve `account`.
+ */
+export async function listSubscriptionsFor(
+  account: string,
+  opts: { includeAll?: boolean; max?: number } = {},
+): Promise<SubscriptionView[]> {
+  const max = opts.max ?? 300;
+  const found: SubscriptionView[] = [];
+  const BATCH = 8;
+  for (let start = 0; start < max; start += BATCH) {
+    const ids = Array.from({ length: BATCH }, (_, i) => start + i);
+    const subs = await Promise.all(ids.map((id) => getSubscription(id)));
+    for (const sub of subs) {
+      if (sub && (opts.includeAll || sub.learner === account || sub.sharer === account)) found.push(sub);
+    }
+    if (subs.some((sub) => sub === null)) break; // ids are sequential: first gap means the end
   }
+  return found;
+}
 
-  return (
-    <>
-      <section>
-        <div className="row">
-          <h3 style={{ margin: 0 }}>{owner === accountId ? "All subscriptions (you are the owner)" : `Subscriptions for ${accountId}`}</h3>
-          <button className="btn ghost" disabled={loading} onClick={() => void refresh()}>
-            {loading ? "Loading…" : "Refresh"}
-          </button>
-        </div>
-        {subs && subs.length === 0 && <p className="muted">None found for this account yet. A new subscription can take a few seconds to appear, so press Refresh.</p>}
-        {subs?.map((s) => (
-          <Row key={s.id} sub={s} me={accountId} isOwner={owner === accountId} onAct={(a, id) => void act(a, id)} />
-        ))}
-      </section>
+export function formatNear(yocto: string | bigint, digits = 2): string {
+  const v = typeof yocto === "bigint" ? yocto : BigInt(yocto);
+  const whole = v / YOCTO_PER_NEAR;
+  const frac = ((v % YOCTO_PER_NEAR) * 10n ** BigInt(digits)) / YOCTO_PER_NEAR;
+  return `${whole}.${frac.toString().padStart(digits, "0")}`;
+}
 
-      <section className="card">
-        <h3>Look up any subscription by id</h3>
-        <label>
-          Subscription id
-          <input value={lookupId} onChange={(e) => setLookupId(e.target.value)} inputMode="numeric" />
-        </label>
-        <button
-          className="btn ghost"
-          onClick={() => void getSubscription(Number(lookupId)).then(setLooked).catch(() => setLooked(null))}
-        >
-          Look up
-        </button>
-        {looked === null && <p>No subscription with that id.</p>}
-        {looked && <Row sub={looked} me={accountId} isOwner={owner === accountId} onAct={(a, id) => void act(a, id)} />}
-      </section>
-      {msg && <p role="status">{msg}</p>}
-    </>
-  );
+export function parseNear(near: string): bigint {
+  const [w, f = ""] = near.trim().split(".");
+  const frac = (f + "0".repeat(24)).slice(0, 24);
+  return BigInt(w || "0") * YOCTO_PER_NEAR + BigInt(frac || "0");
 }

@@ -5,8 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { formatNear, getPrice } from "@/lib/contract";
-import { SOCIAL_CONTRACT, STORAGE_DEPOSIT, listOffers, listRequests } from "@/lib/social";
-import { LIMITS, REQUEST_KEY, buildSet, offerKey, validateOffer, validateRequest, type OfferPost, type RequestPost } from "@/lib/social-format";
+import { SOCIAL_CONTRACT, STORAGE_DEPOSIT, loadBoard } from "@/lib/social";
+import { LIMITS, buildOfferSet, buildRequestSet, validateOffer, validateRequest, type OfferPost, type RequestPost } from "@/lib/social-format";
 import { scanPost } from "@/lib/risk";
 
 interface Card {
@@ -37,10 +37,9 @@ export function RequestBoard() {
   const load = useCallback(async () => {
     setLoadErr("");
     try {
-      const reqs = await listRequests(30);
+      const board = await loadBoard(30);
       const withOffers = await Promise.all(
-        reqs.map(async (req) => {
-          const offers = await listOffers(req.learner, req.blockHeight).catch(() => []);
+        board.map(async ({ request: req, offers }) => {
           // Only people who have set a price in the escrow contract can actually be paid.
           const priced = await Promise.all(
             offers.map(async (o) => {
@@ -72,7 +71,7 @@ export function RequestBoard() {
     setBusy(true);
     setMsg("Waiting for wallet approval. A small storage deposit is attached and unused NEAR is refunded.");
     try {
-      await callTo(SOCIAL_CONTRACT, "set", buildSet(accountId, REQUEST_KEY, v.value), STORAGE_DEPOSIT);
+      await callTo(SOCIAL_CONTRACT, "set", buildRequestSet(accountId, String(v.value.ts), v.value), STORAGE_DEPOSIT);
       setForm({ title: "", details: "", budget: "1" });
       setMsg("Request posted. It can take a few seconds to appear.");
       setTimeout(() => void load(), 3000);
@@ -95,7 +94,7 @@ export function RequestBoard() {
         return;
       }
       setMsg("Waiting for wallet approval.");
-      await callTo(SOCIAL_CONTRACT, "set", buildSet(accountId, offerKey(c.req.learner, c.req.blockHeight), v.value), STORAGE_DEPOSIT);
+      await callTo(SOCIAL_CONTRACT, "set", buildOfferSet(accountId, c.req.learner, c.req.id, v.value), STORAGE_DEPOSIT);
       setOffering(null);
       setNote("");
       setMsg("Offer sent. It can take a few seconds to appear.");
@@ -137,7 +136,7 @@ export function RequestBoard() {
       {cards?.length === 0 && !loadErr && <p className="muted">No requests yet. Be the first to ask.</p>}
 
       {cards?.map((c) => {
-        const id = `${c.req.learner}/${c.req.blockHeight}`;
+        const id = `${c.req.learner}/${c.req.id}`;
         const mine = c.req.learner === accountId;
         return (
           <article className="post" key={id}>

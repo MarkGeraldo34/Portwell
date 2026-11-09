@@ -4,6 +4,8 @@ import { VerdictTag } from "@/components/RiskPanel";
 import { scanPost } from "@/lib/risk";
 import { riskInputFor, stepCount } from "@/server/strategy-content";
 
+const short = (a: string) => (a.length > 26 ? `${a.slice(0, 12)}…${a.slice(-10)}` : a);
+
 export default function Home() {
   const scanned = STRATEGIES.map((s) => ({ s, risk: scanPost(riskInputFor(s)) }));
   const visible = scanned.filter((x) => x.risk.verdict !== "block");
@@ -12,16 +14,25 @@ export default function Home() {
     <>
       <h1>Learn to earn crypto from people who have done it</h1>
       {visible.map(({ s, risk }) => (
-        <article className="card" key={s.id}>
-          <div className="row">
-            <h3 style={{ margin: 0 }}>{s.title}</h3>
-            <span className="tag">risk: {s.risk}</span>
-            <span className="tag">capital: {s.capitalNeededNear} NEAR</span>
+        <article className={`post risk-${s.risk}`} key={s.id}>
+          <div className="post-top">
+            <h3>{s.title}</h3>
             <VerdictTag verdict={risk.verdict} />
           </div>
-          <p>{s.summary}</p>
-          <p className="muted">By {s.sharer} · {stepCount(s.id)} steps (locked)</p>
-          <Link href={`/sharers/${s.sharer}`}>View sharer and subscribe</Link>
+          <p className="post-meta">
+            <span title={s.sharer}>@{short(s.sharer)}</span>
+            <span className="dot">•</span>
+            <span>{s.risk} risk</span>
+            <span className="dot">•</span>
+            <span>{s.capitalNeededNear} NEAR to start</span>
+          </p>
+          <p className="post-summary">{s.summary}</p>
+          <div className="post-foot">
+            <span className="post-lock">🔒 {stepCount(s.id)} steps</span>
+            <Link className="post-cta" href={`/sharers/${s.sharer}`}>
+              Subscribe →
+            </Link>
+          </div>
         </article>
       ))}
       {hidden > 0 && <p className="muted">{hidden} post(s) hidden by the scam check.</p>}

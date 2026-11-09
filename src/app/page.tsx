@@ -1,6 +1,5 @@
 import { STRATEGIES } from "@/data/strategies";
 import { FeedPosts } from "@/components/FeedPosts";
-import { FeedTabs } from "@/components/FeedTabs";
 import { scanPost } from "@/lib/risk";
 import { riskInputFor } from "@/server/strategy-content";
 
@@ -12,7 +11,6 @@ export default function Home() {
   return (
     <>
       <h1>Learn to earn crypto, anon!</h1>
-      <FeedTabs active="strategies" />
       <FeedPosts posts={posts} />
       {hidden > 0 && <p className="muted">{hidden} post(s) hidden by the scam check.</p>}
     </>

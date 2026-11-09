@@ -28,3 +28,9 @@ textarea, select { display:block; width:100%; max-width:480px; padding:8px; marg
 .verdict-review { border-color: #f0b429; color: #f0b429; }
 .verdict-block { border-color: #ff5c5c; color: #ff5c5c; }
 input:focus, textarea:focus, select:focus { outline:2px solid var(--link); outline-offset:1px; }
+
+.icon-btn { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--card); color:var(--fg); cursor:pointer; padding:0; text-decoration:none; }
+.icon-btn:hover:not(:disabled) { border-color:var(--link); color:var(--cyan); }
+.icon-btn:disabled { opacity:.6; cursor:not-allowed; }
+.icon-btn.spin svg { animation: pw-spin .8s linear infinite; }
+@keyframes pw-spin { to { transform: rotate(360deg); } }

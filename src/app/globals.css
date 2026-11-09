@@ -141,3 +141,60 @@ h3 { overflow-wrap: anywhere; }
 .post-cta::after { content: ""; position: absolute; inset: 0; } /* stretched over the .post card: whole card is clickable */ /* whole card is clickable */
 .post:hover .post-cta { background: linear-gradient(90deg, #d92f54, #3b78ff); }
 @media (max-width: 640px) { .post { padding: 12px; } .post-top { flex-direction: column; gap: 6px; } }
+
+/* ---- Feed posts: darker glass + stat grid ---- */
+.post {
+  background: linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.015) 45%, rgba(217,47,84,.06)), rgba(5,7,11,.72);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3);
+  border-color: rgba(255,255,255,.09);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 0 -1px 0 rgba(255,255,255,.03), 0 10px 30px rgba(0,0,0,.5);
+}
+.post::before { background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.035) 48%, transparent 58%); }
+.post-title { margin: 0; font-size: 1.1rem; line-height: 1.35; }
+.post-stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 10px 0 12px; }
+.stat { padding: 8px 10px; border-radius: 10px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.06); }
+.stat dt { font-size: 11px; color: var(--muted); letter-spacing: .02em; }
+.stat dd { margin: 2px 0 0; font-size: 1.15rem; font-weight: 600; }
+.stat.rep.good dd { color: var(--cyan); }
+.stat.rep.mid dd { color: #f0b429; }
+.stat.rep.bad dd { color: #ff5c5c; }
+.post-foot { justify-content: flex-end; }
+@media (max-width: 640px) { .post-stats { grid-template-columns: repeat(3, 1fr); } }
+
+/* ---- Feed post: unique layout (avatar, reputation ring, chips, step trail) ---- */
+.post-head { display: flex; align-items: center; gap: 12px; }
+.avatar { flex: none; width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; font-weight: 700; font-size: 1.1rem; color: #fff;
+  background: conic-gradient(from 210deg, #d92f54, #3b78ff, #2fd6e8, #d92f54); box-shadow: inset 0 0 0 2px rgba(0,0,0,.35), 0 0 18px rgba(59,120,255,.35); }
+.post-id { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.post-meta-id { font-size: 13px; color: var(--link); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gauge { position: relative; flex: none; width: 72px; height: 72px; display: grid; place-items: center; }
+.gauge svg { position: absolute; inset: 0; }
+.gauge-num { position: relative; font-weight: 700; font-size: 1.25rem; line-height: 1; margin-top: -6px; }
+.gauge-num.new { font-size: .95rem; color: var(--muted); }
+.gauge-label { position: absolute; bottom: 14px; font-size: 8px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.chips { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 10px; padding: 0; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px 5px 9px; border-radius: 999px; font-size: 13px; color: var(--muted);
+  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08); }
+.chip svg { color: var(--link); }
+.chip b { color: var(--fg); font-size: 14px; }
+.chip.warn svg, .chip.warn b { color: #ff8a8a; }
+.steps { display: flex; align-items: center; min-width: 0; }
+.step-node { position: relative; flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; font-size: 10px; font-weight: 600; color: #fff;
+  background: linear-gradient(135deg, #3b78ff, #2fd6e8); margin-right: 14px; }
+.step-node:not(:last-child)::after { content: ""; position: absolute; left: 100%; top: 50%; width: 14px; height: 2px; background: rgba(106,162,255,.45); }
+.steps-label { font-size: 12px; color: var(--muted); margin-left: 2px; white-space: nowrap; }
+.post-foot { justify-content: space-between; margin-top: 4px; }
+@media (max-width: 640px) {
+  .post-head { gap: 10px; }
+  .gauge { width: 60px; height: 60px; } .gauge svg { width: 60px; height: 60px; }
+  .gauge-num { font-size: 1.05rem; } .gauge-label { bottom: 10px; font-size: 7px; }
+  .post-foot { flex-direction: column; align-items: stretch; gap: 10px; } .post-cta { text-align: center; }
+}
+
+/* gauge: label sits under the ring, not on it */
+.gauge { height: auto; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.gauge-ring { position: relative; width: 72px; height: 72px; display: grid; place-items: center; }
+.gauge-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.gauge-num { margin-top: 0; }
+.gauge-label { position: static; font-size: 9px; }
+@media (max-width: 640px) { .gauge { width: auto; height: auto; } .gauge-ring { width: 60px; height: 60px; } .gauge-label { font-size: 8px; } }

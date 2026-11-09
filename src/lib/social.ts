@@ -1,5 +1,5 @@
 import { NETWORK, RPC_URLS, YOCTO_PER_NEAR } from "./config";
-import { ACTION, REQUEST_KEY, offerKey, parseOffer, parseRequest, type OfferPost, type RawEntry, type RequestPost } from "./social-format";
+import { OFFER_KEYS, REQUEST_KEYS, parseOffers, parseRequests, type OfferPost, type RequestPost } from "./social-format";
 
 // NEAR Social DB: a public on-chain contract anyone can write to. Requests live there, not in our escrow contract.
 export const SOCIAL_CONTRACT = NETWORK === "mainnet" ? "social.near" : "v1.social08.testnet";
@@ -38,24 +38,12 @@ async function viewSocial<T>(method: string, args: object): Promise<T> {
   throw new Error(lastErr);
 }
 
-const index = (key: string, limit: number) =>
-  viewSocial<RawEntry[]>("index", { action: ACTION, key, order: "desc", limit });
+const get = (keys: string[]) => viewSocial<unknown>("get", { keys });
 
-/** Newest learner requests first. Malformed entries are dropped. */
-export async function listRequests(limit = 30): Promise<RequestPost[]> {
-  const raw = await index(REQUEST_KEY, limit);
-  return raw.map(parseRequest).filter((r): r is RequestPost => r !== null);
-}
-
-/** Sharers who offered to teach one request. One offer per sharer (their latest). */
-export async function listOffers(learner: string, blockHeight: number): Promise<OfferPost[]> {
-  const raw = await index(offerKey(learner, blockHeight), 50);
-  const seen = new Set<string>();
-  const out: OfferPost[] = [];
-  for (const o of raw.map(parseOffer)) {
-    if (!o || seen.has(o.sharer)) continue;
-    seen.add(o.sharer);
-    out.push(o);
-  }
-  return out;
+/** Everything the board needs: all requests (newest first, capped) plus a lookup of offers per request. */
+export async function loadBoard(limit = 30): Promise<{ request: RequestPost; offers: OfferPost[] }[]> {
+  const [reqTree, offerTree] = await Promise.all([get(REQUEST_KEYS), get(OFFER_KEYS).catch(() => ({}))]);
+  return parseRequests(reqTree)
+    .slice(0, limit)
+    .map((request) => ({ request, offers: parseOffers(offerTree, request.learner, request.id) }));
 }

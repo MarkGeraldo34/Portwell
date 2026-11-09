@@ -7,6 +7,7 @@ const rubik = Rubik({ subsets: ["latin"], weight: ["400", "500", "600", "700"], 
 import { WalletProvider } from "@/components/WalletProvider";
 import { ConnectButton } from "@/components/ConnectButton";
 import { CoolModeEverywhere } from "@/components/CoolMode";
+import { WarpBackground } from "@/components/WarpBackground";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <WalletProvider>
           <CoolModeEverywhere />
+          <WarpBackground fixed />
           <header>
             <Link href="/" aria-label="PORTWELL home" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}

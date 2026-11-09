@@ -16,17 +16,9 @@ interface Particle {
   life: number;
 }
 
-function reducedMotion(): boolean {
-  try {
-    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  } catch {
-    return false;
-  }
-}
-
 /** Spawn a burst of particles at viewport coordinates (x, y). */
 export function burst(x: number, y: number, count = 14): void {
-  if (typeof document === "undefined" || reducedMotion()) return;
+  if (typeof document === "undefined") return;
   const layer = document.createElement("div");
   layer.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden";
   document.body.appendChild(layer);

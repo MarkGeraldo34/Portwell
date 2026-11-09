@@ -61,3 +61,27 @@ h3 { overflow-wrap: anywhere; }
 /* Short "Connect" label on phones so the whole header fits on one row */
 .short { display:none; }
 @media (max-width: 640px) { .long { display:none; } .short { display:inline; } }
+
+/* ---- Warp background ---- */
+.warp { --warp-cell: 5vmax; position: relative; overflow: hidden; }
+.warp-fixed { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+.warp-scene { position: absolute; inset: 0; perspective: 120px; transform-style: preserve-3d; opacity: .45; }
+.warp-content { position: relative; z-index: 1; }
+.warp-face {
+  position: absolute; width: 100vmax; height: 100vmax; transform-style: preserve-3d; overflow: hidden;
+  background-image:
+    linear-gradient(rgba(106,162,255,.35) 0 1px, transparent 1px 100%),
+    linear-gradient(90deg, rgba(106,162,255,.35) 0 1px, transparent 1px 100%);
+  background-size: var(--warp-cell) var(--warp-cell);
+}
+.warp-top    { left: 50%; top: 0;    margin-left: -50vmax; transform-origin: 50% 0;   transform: rotateX(-90deg); }
+.warp-bottom { left: 50%; top: 100%; margin-left: -50vmax; transform-origin: 50% 0;   transform: rotateX(-90deg); }
+.warp-left   { left: 0;   top: 0;    transform-origin: 0 0;   transform: rotate(90deg) rotateX(-90deg); }
+.warp-right  { left: 100%; top: 0;   transform-origin: 0 0;   transform: rotate(90deg) rotateX(-90deg); }
+.warp-beam {
+  position: absolute; top: 0; width: var(--warp-cell); height: calc(var(--warp-cell) * 2);
+  background: linear-gradient(var(--beam), transparent); border-radius: 0 0 4px 4px;
+  animation: warp-run 5s linear infinite; opacity: .75;
+}
+@keyframes warp-run { from { transform: translateY(-200%); } to { transform: translateY(60vmax); } }
+@media (prefers-reduced-motion: reduce) { .warp-beam { animation: none; } }

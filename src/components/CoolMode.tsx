@@ -20,7 +20,7 @@ interface Particle {
 export function burst(x: number, y: number, count = 14): void {
   if (typeof document === "undefined") return;
   const layer = document.createElement("div");
-  layer.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:9999;overflow:hidden";
+  layer.style.cssText = "position:fixed;inset:0;pointer-events:none;z-index:2147483647;overflow:hidden";
   document.body.appendChild(layer);
 
   const parts: Particle[] = Array.from({ length: count }, () => {
@@ -83,8 +83,8 @@ export function CoolModeEverywhere() {
         burst(r.left + r.width / 2, r.top + r.height / 2);
       } else burst(e.clientX, e.clientY);
     };
-    document.addEventListener("click", onClick);
-    return () => document.removeEventListener("click", onClick);
+    document.addEventListener("click", onClick, true); // capture: still fires if a component stops propagation
+    return () => document.removeEventListener("click", onClick, true);
   }, []);
   return null;
 }

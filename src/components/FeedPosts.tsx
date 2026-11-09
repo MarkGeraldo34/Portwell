@@ -10,7 +10,6 @@ export interface FeedPost {
   id: string;
   sharer: string;
   title: string;
-  steps: number;
 }
 
 interface Numbers {
@@ -123,11 +122,6 @@ function Post({ post, n }: { post: FeedPost; n?: Numbers }) {
       </ul>
 
       <div className="post-foot">
-        <div className="steps" role="img" aria-label={`${post.steps} steps`}>
-          {Array.from({ length: Math.min(post.steps, 10) }, (_, i) => (
-            <span key={i} className="step-node">{i + 1}</span>
-          ))}
-        </div>
         <Link className="post-cta" href={`/sharers/${post.sharer}`}>
           Subscribe →
         </Link>

@@ -1,41 +1,111 @@
-import type { ReactNode } from "react";
+/* Palette taken from the PORTWELL logo: black, coral red, electric blue, cyan. */
+:root {
+  color-scheme: dark;
+  --bg:#07080b; --fg:#eef1f7; --muted:#9aa3b5; --card:#10131a; --line:#232938;
+  --accent:#d92f54;      /* coral red: buttons, key actions */
+  --link:#6aa2ff;        /* electric blue: links */
+  --cyan:#2fd6e8;        /* highlights, "ok" states */
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 var(--font-rubik), system-ui, sans-serif; -webkit-text-size-adjust:100%; }
+main, header { max-width: 860px; margin: 0 auto; padding: 16px; }
+header { border-bottom:1px solid transparent; border-image:linear-gradient(90deg,#d92f54,#3b78ff,#2fd6e8) 1; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+a { color: var(--link); }
+a:hover { color: var(--cyan); }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin:12px 0; }
+.muted { color: var(--muted); }
+.row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.btn { background:var(--accent); color:#fff; border:0; border-radius:8px; padding:8px 14px; cursor:pointer; font:inherit; }
+.btn:hover:not(:disabled) { filter:brightness(1.12); }
+.btn.ghost { background:transparent; color:var(--fg); border:1px solid var(--line); }
+.btn.ghost:hover:not(:disabled) { border-color:var(--link); }
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+.banner { border:1px solid var(--line); border-left:4px solid var(--link); padding:8px 12px; border-radius:8px; margin:12px 0; color:var(--muted); }
+.tag { border:1px solid var(--line); border-radius:999px; padding:0 8px; font-size:13px; }
+input { display:block; width:100%; max-width:240px; padding:8px; margin:4px 0 8px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--fg); }
+textarea, select { display:block; width:100%; max-width:480px; padding:8px; margin:4px 0 8px; border:1px solid var(--line); border-radius:8px; background:var(--bg); color:var(--fg); font:inherit; }
+.verdict-ok { border-color: var(--cyan); color: var(--cyan); }
+.verdict-review { border-color: #f0b429; color: #f0b429; }
+.verdict-block { border-color: #ff5c5c; color: #ff5c5c; }
+input:focus, textarea:focus, select:focus { outline:2px solid var(--link); outline-offset:1px; }
 
-// Warp tunnel background, modelled on Magic UI's <WarpBackground> (MIT). Pure CSS (see globals.css),
-// no dependencies. Pass children to wrap content, or mount it with no children as a page backdrop.
+.icon-btn { display:inline-flex; align-items:center; justify-content:center; width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--card); color:var(--fg); cursor:pointer; padding:0; text-decoration:none; }
+.icon-btn:hover:not(:disabled) { border-color:var(--link); color:var(--cyan); }
+.icon-btn:disabled { opacity:.6; cursor:not-allowed; }
+.icon-btn.spin svg { animation: pw-spin .8s linear infinite; }
+@keyframes pw-spin { to { transform: rotate(360deg); } }
 
-const BEAMS = [
-  { x: 1, d: 0, t: 4.2, c: "#d92f54" },
-  { x: 4, d: 1.3, t: 5.5, c: "#3b78ff" },
-  { x: 7, d: 2.6, t: 4.8, c: "#2fd6e8" },
-  { x: 10, d: 0.7, t: 6, c: "#d92f54" },
-  { x: 13, d: 3.1, t: 5, c: "#3b78ff" },
-  { x: 16, d: 1.9, t: 4.5, c: "#2fd6e8" },
-];
+/* Rubik everywhere (loaded in layout.tsx), including form controls and code */
+button, input, textarea, select { font-family: inherit; }
+code { font-family: inherit; font-size: .92em; }
 
-function Face({ side }: { side: "top" | "bottom" | "left" | "right" }) {
-  return (
-    <div className={`warp-face warp-${side}`}>
-      {BEAMS.map((b, i) => (
-        <span
-          key={i}
-          className="warp-beam"
-          style={{ left: `calc(var(--warp-cell) * ${b.x + (side === "left" || side === "bottom" ? 1 : 0)})`, animationDelay: `${b.d}s`, animationDuration: `${b.t}s`, ["--beam" as string]: b.c }}
-        />
-      ))}
-    </div>
-  );
+/* Mobile */
+img, svg { max-width: 100%; }
+h1 { font-size: clamp(1.5rem, 5.5vw, 2.1rem); line-height: 1.2; overflow-wrap: anywhere; }
+h3 { overflow-wrap: anywhere; }
+.card, .banner, main p, code { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  main, header { padding: 12px; }
+  header { gap: 8px; }
+  header nav { margin-left: auto; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; }
+  header nav .icon-btn { width: 36px; height: 36px; flex: none; }
+  header nav .btn { white-space: nowrap; }
+  header nav .btn { padding: 8px 10px; font-size: 14px; }
+  header nav code { max-width: 64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .card { padding: 12px; border-radius: 10px; }
+  input, textarea, select { max-width: 100%; font-size: 16px; } /* 16px stops iOS zooming on focus */
+  .btn { min-height: 40px; }
 }
 
-export function WarpBackground({ children, fixed = false }: { children?: ReactNode; fixed?: boolean }) {
-  return (
-    <div className={fixed ? "warp warp-fixed" : "warp"} aria-hidden={children ? undefined : true}>
-      <div className="warp-scene" aria-hidden="true">
-        <Face side="top" />
-        <Face side="bottom" />
-        <Face side="left" />
-        <Face side="right" />
-      </div>
-      {children && <div className="warp-content">{children}</div>}
-    </div>
-  );
+/* Short "Connect" label on phones so the whole header fits on one row */
+.short { display:none; }
+@media (max-width: 640px) { .long { display:none; } .short { display:inline; } }
+
+/* ---- Warp background ---- */
+.warp { --warp-cell: 5vmax; position: relative; overflow: hidden; }
+.warp-fixed { position: fixed; inset: 0; z-index: -1; pointer-events: none; }
+.warp-scene { position: absolute; inset: 0; perspective: 120px; transform-style: preserve-3d; opacity: .45; }
+.warp-content { position: relative; z-index: 1; }
+.warp-face {
+  position: absolute; width: 100vmax; height: 100vmax; transform-style: preserve-3d; overflow: hidden;
+  background-image:
+    linear-gradient(rgba(106,162,255,.35) 0 1px, transparent 1px 100%),
+    linear-gradient(90deg, rgba(106,162,255,.35) 0 1px, transparent 1px 100%);
+  background-size: var(--warp-cell) var(--warp-cell);
 }
+.warp-top    { left: 50%; top: 0;    margin-left: -50vmax; transform-origin: 50% 0;   transform: rotateX(-90deg); }
+.warp-bottom { left: 50%; top: 100%; margin-left: -50vmax; transform-origin: 50% 0;   transform: rotateX(-90deg); }
+.warp-left   { left: 0;   top: 0;    transform-origin: 0 0;   transform: rotate(90deg) rotateX(-90deg); }
+.warp-right  { left: 100%; top: 0;   transform-origin: 0 0;   transform: rotate(90deg) rotateX(-90deg); }
+.warp-beam {
+  position: absolute; top: 0; width: var(--warp-cell); height: calc(var(--warp-cell) * 2);
+  background: linear-gradient(var(--beam), transparent); border-radius: 0 0 4px 4px;
+  animation: warp-run 5s linear infinite; opacity: .75;
+}
+@keyframes warp-run { from { transform: translateY(-200%); } to { transform: translateY(60vmax); } }
+@media (prefers-reduced-motion: reduce) { .warp-beam { animation: none; } }
+
+/* Phones / touch: swap the 3D tunnel for a flat, GPU-friendly grid with falling beams */
+.warp-flat { display: none; }
+@media (max-width: 820px), (pointer: coarse) {
+  .warp-scene { display: none; }
+  .warp-fixed { height: 100lvh; contain: strict; }
+  .warp-flat {
+    display: block; position: absolute; inset: 0; overflow: hidden; opacity: .5;
+    background-image:
+      linear-gradient(rgba(106,162,255,.22) 0 1px, transparent 1px 100%),
+      linear-gradient(90deg, rgba(106,162,255,.22) 0 1px, transparent 1px 100%);
+    background-size: 48px 48px;
+    -webkit-mask-image: radial-gradient(ellipse at 50% 40%, #000 25%, transparent 80%);
+    mask-image: radial-gradient(ellipse at 50% 40%, #000 25%, transparent 80%);
+  }
+  .warp-flat-beam {
+    position: absolute; top: 0; width: 3px; height: 38vh; border-radius: 3px;
+    background: linear-gradient(transparent, var(--beam));
+    transform: translate3d(0, -45vh, 0); will-change: transform;
+    animation: warp-flat-fall 6s linear infinite;
+  }
+  @keyframes warp-flat-fall { to { transform: translate3d(0, 110vh, 0); } }
+}
+@media (prefers-reduced-motion: reduce) { .warp-flat-beam { animation: none; } }

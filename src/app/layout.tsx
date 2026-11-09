@@ -3,6 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 import { WalletProvider } from "@/components/WalletProvider";
 import { ConnectButton } from "@/components/ConnectButton";
+import { CoolModeEverywhere } from "@/components/CoolMode";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -15,6 +16,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en">
       <body>
         <WalletProvider>
+          <CoolModeEverywhere />
           <header>
             <Link href="/" aria-label="PORTWELL home" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit" }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}

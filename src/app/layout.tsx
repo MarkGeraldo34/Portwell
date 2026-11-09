@@ -8,6 +8,7 @@ import { WalletProvider } from "@/components/WalletProvider";
 import { ConnectButton } from "@/components/ConnectButton";
 import { CoolModeEverywhere } from "@/components/CoolMode";
 import { WarpBackground } from "@/components/WarpBackground";
+import { SideNav } from "@/components/SideNav";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 
 export const metadata: Metadata = {
@@ -52,14 +53,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <ConnectButton />
             </nav>
           </header>
-          <main>
+          <div className="shell">
+            <SideNav />
+            <main>
             {!CONTRACT_CONFIGURED && (
               <p className="banner" role="alert">
                 Demo mode: no escrow contract is configured, so subscriptions and payments are disabled.
               </p>
             )}
             {children}
-          </main>
+            </main>
+          </div>
         </WalletProvider>
       </body>
     </html>

@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test src/lib/risk.test.ts src/lib/nep413.test.ts src/lib/unlock.test.ts"
+    "test": "node --test src/lib/risk.test.ts src/lib/nep413.test.ts src/lib/unlock.test.ts src/lib/reputation.test.ts src/lib/social-format.test.ts"
   },
   "dependencies": {
     "@near-js/crypto": "2.5.1",

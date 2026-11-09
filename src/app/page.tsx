@@ -12,7 +12,7 @@ export default function Home() {
   const hidden = scanned.length - visible.length;
   return (
     <>
-      <h1>Learn to earn crypto from people who have done it</h1>
+      <h1>Learn to earn crypto</h1>
       {visible.map(({ s, risk }) => (
         <article className={`post risk-${s.risk}`} key={s.id}>
           <div className="post-top">

@@ -7,7 +7,8 @@ export function ConnectButton() {
   if (!accountId) {
     return (
       <button className="btn" disabled={!ready} onClick={signIn}>
-        Connect NEAR wallet
+        <span className="long">Connect NEAR wallet</span>
+        <span className="short">Connect</span>
       </button>
     );
   }

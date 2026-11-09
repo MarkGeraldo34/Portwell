@@ -75,13 +75,14 @@ export function CoolMode({ children }: { children: ReactElement<{ ref?: unknown 
 export function CoolModeEverywhere() {
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
-      const btn = (e.target as Element | null)?.closest?.("button, .btn");
+      const btn = (e.target as Element | null)?.closest?.("button, .btn, .post-cta");
       if (!btn || (btn as HTMLButtonElement).disabled) return;
       // Keyboard "clicks" report 0,0: burst from the button's centre instead.
+      const n = btn.classList.contains("post-cta") ? 26 : 14; // Subscribe gets a bigger burst
       if (e.clientX === 0 && e.clientY === 0) {
         const r = btn.getBoundingClientRect();
-        burst(r.left + r.width / 2, r.top + r.height / 2);
-      } else burst(e.clientX, e.clientY);
+        burst(r.left + r.width / 2, r.top + r.height / 2, n);
+      } else burst(e.clientX, e.clientY, n);
     };
     document.addEventListener("click", onClick, true); // capture: still fires if a component stops propagation
     return () => document.removeEventListener("click", onClick, true);

@@ -198,3 +198,14 @@ h3 { overflow-wrap: anywhere; }
 .gauge-num { margin-top: 0; }
 .gauge-label { position: static; font-size: 9px; }
 @media (max-width: 640px) { .gauge { width: auto; height: auto; } .gauge-ring { width: 60px; height: 60px; } .gauge-label { font-size: 8px; } }
+
+/* playbook: ascending staircase that grows with the number of steps */
+.playbook { display: flex; align-items: flex-end; gap: 10px; min-width: 0; }
+.stairs { display: inline-flex; align-items: flex-end; gap: 3px; height: 34px; }
+.stairs i { display: block; width: 7px; border-radius: 3px 3px 1px 1px; background: linear-gradient(180deg, #2fd6e8, #3b78ff 55%, #d92f54); box-shadow: 0 0 8px rgba(59,120,255,.35); }
+.playbook-text { font-size: 13px; color: var(--muted); padding-bottom: 2px; white-space: nowrap; }
+.playbook-text b { color: var(--fg); font-size: 15px; }
+
+/* steps: numbered dots only, no connecting lines and no text label */
+.step-node { margin-right: 6px; }
+.step-node:not(:last-child)::after { display: none; }

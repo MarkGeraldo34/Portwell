@@ -7,7 +7,7 @@
   --cyan:#2fd6e8;        /* highlights, "ok" states */
 }
 * { box-sizing: border-box; }
-body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 system-ui, sans-serif; }
+body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.6 var(--font-rubik), system-ui, sans-serif; -webkit-text-size-adjust:100%; }
 main, header { max-width: 860px; margin: 0 auto; padding: 16px; }
 header { border-bottom:1px solid transparent; border-image:linear-gradient(90deg,#d92f54,#3b78ff,#2fd6e8) 1; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
 a { color: var(--link); }
@@ -34,3 +34,30 @@ input:focus, textarea:focus, select:focus { outline:2px solid var(--link); outli
 .icon-btn:disabled { opacity:.6; cursor:not-allowed; }
 .icon-btn.spin svg { animation: pw-spin .8s linear infinite; }
 @keyframes pw-spin { to { transform: rotate(360deg); } }
+
+/* Rubik everywhere (loaded in layout.tsx), including form controls and code */
+button, input, textarea, select { font-family: inherit; }
+code { font-family: inherit; font-size: .92em; }
+
+/* Mobile */
+img, svg { max-width: 100%; }
+h1 { font-size: clamp(1.5rem, 5.5vw, 2.1rem); line-height: 1.2; overflow-wrap: anywhere; }
+h3 { overflow-wrap: anywhere; }
+.card, .banner, main p, code { overflow-wrap: anywhere; }
+@media (max-width: 640px) {
+  body { font-size: 16px; }
+  main, header { padding: 12px; }
+  header { gap: 8px; }
+  header nav { margin-left: auto; gap: 6px; flex-wrap: nowrap; justify-content: flex-end; }
+  header nav .icon-btn { width: 36px; height: 36px; flex: none; }
+  header nav .btn { white-space: nowrap; }
+  header nav .btn { padding: 8px 10px; font-size: 14px; }
+  header nav code { max-width: 64px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .card { padding: 12px; border-radius: 10px; }
+  input, textarea, select { max-width: 100%; font-size: 16px; } /* 16px stops iOS zooming on focus */
+  .btn { min-height: 40px; }
+}
+
+/* Short "Connect" label on phones so the whole header fits on one row */
+.short { display:none; }
+@media (max-width: 640px) { .long { display:none; } .short { display:inline; } }

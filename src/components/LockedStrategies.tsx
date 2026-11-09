@@ -76,14 +76,17 @@ export function LockedStrategies({ sharer, teasers }: { sharer: string; teasers:
       {teasers.map((t) => {
         const d = details?.find((x) => x.id === t.id);
         return (
-          <article className="card" key={t.id}>
-            <div className="row">
-              <h3 style={{ margin: 0 }}>{t.title}</h3>
-              <span className="tag">risk: {t.risk}</span>
-              <span className="tag">capital: {t.capitalNeededNear} NEAR</span>
+          <article className={`post risk-${t.risk}`} key={t.id}>
+            <div className="post-top">
+              <h3>{t.title}</h3>
               <VerdictTag verdict={t.verdict} />
             </div>
-            <p>{t.summary}</p>
+            <p className="post-meta">
+              <span>{t.risk} risk</span>
+              <span className="dot">•</span>
+              <span>{t.capitalNeededNear} NEAR to start</span>
+            </p>
+            <p style={{ margin: "0 0 10px", fontSize: "14.5px" }}>{t.summary}</p>
             {d ? (
               <>
                 <ol>
@@ -99,7 +102,7 @@ export function LockedStrategies({ sharer, teasers }: { sharer: string; teasers:
                 </p>
               </>
             ) : (
-              <p className="muted">🔒 {t.steps} steps, risk notes and proof wallet unlock with an active subscription.</p>
+              <p className="post-lock">🔒 {t.steps} steps, risk notes and proof wallet unlock with a subscription.</p>
             )}
           </article>
         );

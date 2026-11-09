@@ -16,7 +16,7 @@ export interface FeedPost {
 interface Numbers {
   subscriptions: number;
   disputes: number;
-  cancels: number;
+  refunds: number;
 }
 
 const short = (a: string) => (a.length > 28 ? `${a.slice(0, 14)}…${a.slice(-10)}` : a);
@@ -39,7 +39,11 @@ export function FeedPosts({ posts }: { posts: FeedPost[] }) {
         out[s] = {
           subscriptions: st?.subscriptions ?? 0,
           disputes: st?.disputes ?? 0,
-          cancels: all.filter((x) => x.sharer === s && x.status === "Cancelled").length,
+          // A refund is money that went back to the learner: a cancel or a dispute resolved for the learner
+          // that left part of the payment unreleased. A cancel after every week was paid out refunds nothing.
+          refunds: all.filter(
+            (x) => x.sharer === s && (x.status === "Cancelled" || x.status === "Resolved") && BigInt(x.released) < BigInt(x.total),
+          ).length,
         };
       });
       if (!cancelled) setStats(out);
@@ -112,18 +116,17 @@ function Post({ post, n }: { post: FeedPost; n?: Numbers }) {
           <svg width="16" height="16" viewBox="0 0 24 24" {...ICON} aria-hidden="true"><path d="M4 22V4M4 4h13l-2 4 2 4H4" /></svg>
           <b>{v(n?.disputes)}</b> <span>disputes</span>
         </li>
-        <li className="chip" title="Cancels and refunds">
+        <li className="chip" title="Refunds paid back to learners">
           <svg width="16" height="16" viewBox="0 0 24 24" {...ICON} aria-hidden="true"><path d="M9 14L4 9l5-5" /><path d="M4 9h10a6 6 0 0 1 0 12h-3" /></svg>
-          <b>{v(n?.cancels)}</b> <span>cancels / refunds</span>
+          <b>{v(n?.refunds)}</b> <span>refunds</span>
         </li>
       </ul>
 
       <div className="post-foot">
-        <div className="steps" title={`${post.steps} steps`}>
+        <div className="steps" role="img" aria-label={`${post.steps} steps`}>
           {Array.from({ length: Math.min(post.steps, 10) }, (_, i) => (
             <span key={i} className="step-node">{i + 1}</span>
           ))}
-          <span className="steps-label">{post.steps} steps</span>
         </div>
         <Link className="post-cta" href={`/sharers/${post.sharer}`}>
           Subscribe →

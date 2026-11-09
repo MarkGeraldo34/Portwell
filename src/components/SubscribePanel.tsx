@@ -45,7 +45,7 @@ export function SubscribePanel({ sharer }: { sharer: string }) {
     try {
       await call("subscribe", { sharer }, BigInt(price));
       setSubscribed(true);
-      setMsg("Sent. Funds are held in escrow and released weekly. Open My subscriptions and press Refresh to see it.");
+      setMsg("Sent. Funds are held in escrow and released weekly. Open My subscriptions (the card icon at the top) and press the refresh icon to see it.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Transaction failed");
     } finally {

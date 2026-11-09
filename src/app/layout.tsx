@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import "./globals.css";
+import { Rubik } from "next/font/google";
+
+const rubik = Rubik({ subsets: ["latin"], weight: ["400", "500", "600", "700"], display: "swap", variable: "--font-rubik" });
 import { WalletProvider } from "@/components/WalletProvider";
 import { ConnectButton } from "@/components/ConnectButton";
 import { CoolModeEverywhere } from "@/components/CoolMode";
@@ -13,7 +16,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={rubik.variable}>
       <body>
         <WalletProvider>
           <CoolModeEverywhere />
@@ -32,13 +35,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <nav className="row">
               <Link href="/share" className="icon-btn" aria-label="Share a post" title="Share a post">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                  <circle cx="18" cy="5" r="3" />
-                  <circle cx="6" cy="12" r="3" />
-                  <circle cx="18" cy="19" r="3" />
-                  <path d="M8.6 10.5l6.8-4M8.6 13.5l6.8 4" />
+                  <path d="M4 4.5h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1h-8l-5 4v-4H4a1 1 0 0 1-1-1v-10a1 1 0 0 1 1-1z" />
+                  <path d="M12 13.5V8" />
+                  <path d="M9.4 10.4L12 7.8l2.6 2.6" />
                 </svg>
               </Link>
-              <ConnectButton />
               <Link href="/subscriptions" className="icon-btn" aria-label="My subscriptions" title="My subscriptions">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <rect x="3" y="5" width="18" height="14" rx="3" />
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <path d="M7 15h4" />
                 </svg>
               </Link>
+              <ConnectButton />
             </nav>
           </header>
           <main>

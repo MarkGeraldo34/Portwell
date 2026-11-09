@@ -232,3 +232,7 @@ h3 { overflow-wrap: anywhere; }
 .offer-box { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: flex-end; }
 .offer-box input { padding: 8px 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.35); color: var(--fg); min-width: 0; flex: 1 1 180px; }
 @media (max-width: 640px) { .offer-link { margin-left: 0; } .post-foot { flex-direction: row; } }
+
+/* Header spans the full window: logo hugs the left edge, connect button the right edge. Content stays centred. */
+header { max-width: none; width: 100%; margin: 0; padding: 10px 12px; }
+header nav { margin-left: auto; }

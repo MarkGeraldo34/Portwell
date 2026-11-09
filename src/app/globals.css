@@ -109,3 +109,28 @@ h3 { overflow-wrap: anywhere; }
   @keyframes warp-flat-fall { to { transform: translate3d(0, 110vh, 0); } }
 }
 @media (prefers-reduced-motion: reduce) { .warp-flat-beam { animation: none; } }
+
+/* ---- Compact post cards (feed) ---- */
+.post {
+  --tone: var(--cyan);
+  position: relative; margin: 12px 0; padding: 14px 16px 12px;
+  border: 1px solid var(--line); border-left: 3px solid var(--tone); border-radius: 12px;
+  background: linear-gradient(135deg, rgba(217,47,84,.10), rgba(59,120,255,.07) 55%, rgba(47,214,232,.06)), var(--card);
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.post:hover { transform: translateY(-2px); border-color: var(--tone); box-shadow: 0 6px 22px rgba(59,120,255,.18); }
+.post.risk-medium { --tone: #f0b429; }
+.post.risk-high { --tone: #ff5c5c; }
+.post-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.post-top h3 { margin: 0; font-size: 1.05rem; line-height: 1.35; }
+.post-top .tag { flex: none; font-size: 12px; white-space: nowrap; }
+.post-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin: 6px 0 8px; font-size: 13px; color: var(--muted); }
+.post-meta .dot { color: var(--line); }
+.post-meta span:first-child { color: var(--link); }
+.post-summary { margin: 0 0 10px; font-size: 14.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.post-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.post-lock { font-size: 13px; color: var(--muted); }
+.post-cta { font-size: 14px; font-weight: 600; text-decoration: none; color: #fff; background: var(--accent); padding: 6px 14px; border-radius: 999px; }
+.post-cta::after { content: ""; position: absolute; inset: 0; border-radius: 12px; } /* whole card is clickable */
+.post:hover .post-cta { background: linear-gradient(90deg, #d92f54, #3b78ff); }
+@media (max-width: 640px) { .post { padding: 12px; } .post-top { flex-direction: column; gap: 6px; } }

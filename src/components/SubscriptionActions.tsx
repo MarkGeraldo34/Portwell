@@ -141,11 +141,14 @@ export function SubscriptionActions() {
       <section>
         <div className="row">
           <h3 style={{ margin: 0 }}>{owner === accountId ? "All subscriptions (you are the owner)" : `Subscriptions for ${accountId}`}</h3>
-          <button className="btn ghost" disabled={loading} onClick={() => void refresh()}>
-            {loading ? "Loading…" : "Refresh"}
+          <button className={`icon-btn${loading ? " spin" : ""}`} disabled={loading} onClick={() => void refresh()} aria-label="Refresh" title="Refresh">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+              <path d="M21 3v6h-6" />
+            </svg>
           </button>
         </div>
-        {subs && subs.length === 0 && <p className="muted">None found for this account yet. A new subscription can take a few seconds to appear, so press Refresh.</p>}
+        {subs && subs.length === 0 && <p className="muted">None found for this account yet. A new subscription can take a few seconds to appear, so press the refresh icon.</p>}
         {subs?.map((s) => (
           <Row key={s.id} sub={s} me={accountId} isOwner={owner === accountId} onAct={(a, id) => void act(a, id)} />
         ))}

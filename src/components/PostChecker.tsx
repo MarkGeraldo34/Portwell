@@ -96,6 +96,7 @@ export function PostChecker({ onApproved }: { onApproved?: (approved: boolean) =
           </p>
           <RiskPanel result={res.rules} aiReasons={res.ai.reasons} />
           {!res.ai.available && <p role="alert">The AI scam review is required but unavailable right now ({res.ai.error}). Try again later.</p>}
+          {res.ai.available && !res.approved && <p className="ai-msg" role="alert">The AI scam review did not approve this post. Reword it and run the check again.</p>}
           {res.ai.available && res.approved && <p role="status">Passed the AI scam review. You can set your price below.</p>}
         </>
       )}

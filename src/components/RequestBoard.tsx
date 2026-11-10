@@ -25,12 +25,17 @@ const ago = (ts: number) => {
   return `${Math.round(m / 1440)} d ago`;
 };
 
-export function RequestBoard() {
+export function RequestBoard({ mode }: { mode: "form" | "list" }) {
   const { accountId, signIn, callTo } = useWallet();
   const [cards, setCards] = useState<Card[] | null>(null);
   const [loadErr, setLoadErr] = useState("");
   const [form, setForm] = useState({ title: "", details: "", budget: "1" });
-  const [msg, setMsg] = useState("");
+  const [msg, setMsgText] = useState("");
+  const [bad, setBad] = useState(false); // red text for AI-check and safety messages
+  const setMsg = (text: string, isBad = false) => {
+    setMsgText(text);
+    setBad(isBad);
+  };
   const [busy, setBusy] = useState(false);
   const [offering, setOffering] = useState<string | null>(null); // "learner/blockHeight" being answered
   const [note, setNote] = useState("");
@@ -68,12 +73,12 @@ export function RequestBoard() {
     if (!v.ok) return setMsg(v.error);
     // Same scam rules as strategy posts: no seed phrases, guaranteed returns, "send me funds first"...
     const scan = scanPost({ title: v.value.t, summary: v.value.d, steps: [], risks: "", risk: "low", capitalNeededNear: 0 });
-    if (scan.verdict === "block") return setMsg("This looks unsafe to publish (it mentions something like a seed phrase, guaranteed returns or sending funds first). Please reword it.");
+    if (scan.verdict === "block") return setMsg("This looks unsafe to publish (it mentions something like a seed phrase, guaranteed returns or sending funds first). Please reword it.", true);
     setBusy(true);
     setMsg("Running the AI scam review…");
     try {
       const blocked = await requireAiApproval({ title: v.value.t, summary: v.value.d, steps: [], risks: "", risk: "low", capitalNeededNear: 0 });
-      if (blocked) return setMsg(blocked);
+      if (blocked) return setMsg(blocked, true);
       setMsg("Review passed. Waiting for wallet approval. A small storage deposit is attached and unused NEAR is refunded.");
       await callTo(SOCIAL_CONTRACT, "set", buildRequestSet(accountId, String(v.value.ts), v.value), STORAGE_DEPOSIT);
       setForm({ title: "", details: "", budget: "1" });
@@ -94,13 +99,13 @@ export function RequestBoard() {
     setMsg("Checking that you have a monthly price set…");
     try {
       if (CONTRACT_CONFIGURED && !(await getPrice(accountId).catch(() => null))) {
-        setMsg("Set your monthly price first (Share a post in the left menu) so learners can pay you. Then offer again.");
+        setMsg("Set your monthly price first (Share post in the left menu) so learners can pay you. Then offer again.");
         return;
       }
       if (v.value.n) {
         setMsg("Running the AI scam review…");
         const blocked = await requireAiApproval({ title: "Offer to teach", summary: v.value.n, steps: [], risks: "", risk: "low", capitalNeededNear: 0 });
-        if (blocked) return setMsg(blocked);
+        if (blocked) return setMsg(blocked, true);
       }
       setMsg("Waiting for wallet approval.");
       await callTo(SOCIAL_CONTRACT, "set", buildOfferSet(accountId, c.req.learner, c.req.id, v.value), STORAGE_DEPOSIT);
@@ -115,8 +120,12 @@ export function RequestBoard() {
     }
   }
 
+  // Request strategy shows only your own requests (and the offers you got); Requests shows everyone's.
+  const shown = mode === "form" ? cards?.filter((c) => c.req.learner === accountId) : cards;
+
   return (
     <>
+      {mode === "form" && (
       <section className="post req-form">
         <h3 className="post-title">Ask for a guide</h3>
         <p className="muted" style={{ margin: "4px 0 10px" }}>
@@ -137,14 +146,17 @@ export function RequestBoard() {
         <button className="btn" disabled={busy} onClick={() => void post()}>
           {accountId ? "Post request" : "Connect wallet to post"}
         </button>
-        {msg && <p className="muted" style={{ marginBottom: 0 }}>{msg}</p>}
+        {msg && <p className={bad ? "ai-msg" : "muted"} role={bad ? "alert" : "status"} style={{ marginBottom: 0 }}>{msg}</p>}
       </section>
+      )}
+      {mode === "list" && msg && <p className={bad ? "ai-msg" : "muted"} role={bad ? "alert" : "status"}>{msg}</p>}
 
       {cards === null && <p className="muted">Loading requests…</p>}
       {loadErr && <p className="muted">Could not load requests right now ({loadErr}). Try again in a moment.</p>}
-      {cards?.length === 0 && !loadErr && <p className="muted">No requests yet. Be the first to ask.</p>}
+      {shown?.length === 0 && !loadErr && <p className="muted">{mode === "form" ? "You have not requested a strategy yet." : "No requests yet. Learners who ask for a strategy will show up here."}</p>}
 
-      {cards?.map((c) => {
+      {mode === "form" && shown && shown.length > 0 && <h2 className="board-title">Your requests</h2>}
+      {shown?.map((c) => {
         const id = `${c.req.learner}/${c.req.id}`;
         const mine = c.req.learner === accountId;
         return (

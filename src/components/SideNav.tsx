@@ -24,7 +24,7 @@ const ITEMS: { href: string; label: string; icon: ReactNode; match: (p: string) 
   },
   {
     href: "/share",
-    label: "Share a post",
+    label: "Share post",
     match: (p) => p.startsWith("/share"),
     icon: svg(
       <>
@@ -34,9 +34,21 @@ const ITEMS: { href: string; label: string; icon: ReactNode; match: (p: string) 
     ),
   },
   {
+    href: "/request-strategy",
+    label: "Request strategy",
+    match: (p) => p.startsWith("/request-strategy"),
+    icon: svg(
+      <>
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 8v8" />
+        <path d="M8 12h8" />
+      </>,
+    ),
+  },
+  {
     href: "/requests",
     label: "Requests",
-    match: (p) => p.startsWith("/requests"),
+    match: (p) => p === "/requests" || p.startsWith("/requests/"),
     icon: svg(
       <>
         <circle cx="12" cy="12" r="10" />

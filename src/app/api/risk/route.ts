@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { scanPost, stricter, type RiskInput } from "@/lib/risk";
+import { decide, scanPost, type RiskInput } from "@/lib/risk";
 import { aiReview } from "@/lib/ai-review";
 
 // Tiny in-memory limiter so a public endpoint cannot burn AI credits. Per server instance only.
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
   const rules = scanPost(post);
   const ai = await aiReview(post);
-  // The AI may only raise the verdict. A post cannot talk its way to "ok".
-  const final = ai.available && ai.verdict ? stricter(rules.verdict, ai.verdict) : rules.verdict;
-  return NextResponse.json({ rules, ai, final });
+  // The AI may only raise the verdict, and it is mandatory: if it could not run, nothing is approved.
+  const { final, approved } = decide(rules.verdict, ai);
+  return NextResponse.json({ rules, ai, final, approved });
 }

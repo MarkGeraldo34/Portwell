@@ -68,3 +68,12 @@ test("stricter never lowers a verdict", () => {
   assert.equal(stricter("block", "ok"), "block");
   assert.equal(stricter("ok", "review"), "review");
 });
+
+test("AI review is mandatory: no AI verdict means not approved", async () => {
+  const { decide } = await import("./risk.ts");
+  assert.equal(decide("ok", { available: false }).approved, false);
+  assert.equal(decide("ok", { available: true, verdict: "ok" }).approved, true);
+  assert.equal(decide("ok", { available: true, verdict: "review" }).approved, true);
+  assert.equal(decide("ok", { available: true, verdict: "block" }).approved, false);
+  assert.equal(decide("block", { available: true, verdict: "ok" }).approved, false);
+});

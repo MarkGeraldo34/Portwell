@@ -30,7 +30,7 @@ export function RiskPanel({ result, aiReasons }: { result: RiskResult; aiReasons
       {aiReasons && aiReasons.length > 0 && (
         <>
           <p className="muted">AI review (NEAR AI Cloud)</p>
-          <ul>
+          <ul className="ai-reasons">
             {aiReasons.map((r) => (
               <li key={r}>{r}</li>
             ))}

@@ -1,12 +1,10 @@
-import { SetPriceForm } from "@/components/SetPriceForm";
-import { PostChecker } from "@/components/PostChecker";
+import { ShareFlow } from "@/components/ShareFlow";
 
 export default function SharePage() {
   return (
     <>
       <h1>Share a post</h1>
-      <PostChecker />
-      <SetPriceForm />
+      <ShareFlow />
     </>
   );
 }

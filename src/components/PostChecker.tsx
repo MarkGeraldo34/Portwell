@@ -8,6 +8,7 @@ interface ApiResult {
   rules: RiskResult;
   ai: { available: boolean; verdict?: Verdict; reasons?: string[]; error?: string };
   final: Verdict;
+  approved: boolean;
 }
 
 const SCAM_EXAMPLE = {
@@ -17,7 +18,7 @@ const SCAM_EXAMPLE = {
   risks: "none",
 };
 
-export function PostChecker() {
+export function PostChecker({ onApproved }: { onApproved?: (approved: boolean) => void }) {
   const [f, setF] = useState({ title: "", summary: "", steps: "", risks: "" });
   const [risk, setRisk] = useState<"low" | "medium" | "high">("medium");
   const [res, setRes] = useState<ApiResult | null>(null);
@@ -27,6 +28,7 @@ export function PostChecker() {
   async function check() {
     setBusy(true);
     setErr("");
+    onApproved?.(false);
     try {
       const r = await fetch("/api/risk", {
         method: "POST",
@@ -39,7 +41,9 @@ export function PostChecker() {
         }),
       });
       if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error ?? `Error ${r.status}`);
-      setRes(await r.json());
+      const data = (await r.json()) as ApiResult;
+      setRes(data);
+      onApproved?.(data.approved === true);
     } catch (e) {
       setErr(e instanceof Error ? e.message : "Check failed");
     } finally {
@@ -62,7 +66,7 @@ export function PostChecker() {
     <section className="card">
       <h3>Check a strategy post (sharers)</h3>
       <p className="muted">
-        Every post is scanned for scam patterns before it is shown. Blocked posts are hidden from learners.
+        The AI scam review is required. Your post must pass it before you can set a price and take subscribers.
       </p>
       {field("title", "Title")}
       {field("summary", "Summary", true)}
@@ -91,7 +95,8 @@ export function PostChecker() {
             Final verdict: <VerdictTag verdict={res.final} />
           </p>
           <RiskPanel result={res.rules} aiReasons={res.ai.reasons} />
-          {!res.ai.available && <p className="muted">AI review unavailable ({res.ai.error}). Rules-based check applied.</p>}
+          {!res.ai.available && <p role="alert">The AI scam review is required but unavailable right now ({res.ai.error}). Try again later.</p>}
+          {res.ai.available && res.approved && <p role="status">Passed the AI scam review. You can set your price below.</p>}
         </>
       )}
     </section>

@@ -272,7 +272,7 @@ header nav { margin-left: auto; }
 .tabs button.tab { border: 0; background: transparent; cursor: pointer; font-family: inherit; }
 .tabs button.tab.on { background: linear-gradient(135deg, #d92f54, #3b78ff); }
 
-/* ---- Share a post: dark glass forms ---- */
+/* ---- Share post: dark glass forms ---- */
 .share h1 { margin-bottom: 4px; }
 .share .card {
   position: relative; overflow: hidden; margin: 14px 0; padding: 18px 18px 16px;
@@ -296,4 +296,8 @@ header nav { margin-left: auto; }
 .share .btn.ghost { border-radius: 999px; background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.14); }
 .share .tag { background: rgba(255,255,255,.05); }
 .share p[role="status"] { color: var(--cyan); }
-.share p[role="alert"] { color: #ff8a8a; }
+
+/* AI scam-check messages are red */
+.ai-msg, .share p[role="alert"], .ai-reasons, .ai-reasons li { color: #ff5c5c; }
+.board-title { font-size: 1.05rem; margin: 18px 0 4px; color: var(--muted); font-weight: 600; }
+@media (max-width: 900px) { .side-item { font-size: 10px; } }

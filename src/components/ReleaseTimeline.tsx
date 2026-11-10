@@ -29,17 +29,9 @@ export function ReleaseTimeline({ sub }: { sub: SubscriptionView }) {
       <div className="row" style={{ gap: 6 }}>
         {weeks.map((w) => (
           <div
+            className={`wk wk-${paused && w.state !== "settled" ? "paused" : w.state}`}
             key={w.n}
             title={`Week ${w.n}: ${formatNear(part)} NEAR, matures ${fmtDate(w.dueMs)}`}
-            style={{
-              flex: 1,
-              minWidth: 64,
-              padding: "6px 8px",
-              borderRadius: 6,
-              border: "1px solid currentColor",
-              opacity: w.state === "locked" ? 0.55 : 1,
-              fontSize: 12,
-            }}
           >
             <strong>Week {w.n}</strong>
             <br />

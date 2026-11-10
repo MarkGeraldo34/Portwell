@@ -38,14 +38,17 @@ function Row({
   const isLearner = sub.learner === me;
   const open = sub.status === "Active";
   return (
-    <div className="card">
-      <p>
-        <strong>#{sub.id}</strong> · {sub.status}
-        <br />
-        {sub.learner} → {sub.sharer}
-        <br />
-        {progress(sub)}
+    <div className="card sub-card">
+      <div className="sub-head">
+        <strong>Subscription #{sub.id}</strong>
+        <span className={`tag status-${sub.status.toLowerCase()}`}>{sub.status}</span>
+      </div>
+      <p className="sub-parties">
+        <span title={sub.learner}>{sub.learner}</span>
+        <span className="arrow" aria-hidden="true">→</span>
+        <span title={sub.sharer}>{sub.sharer}</span>
       </p>
+      <p className="sub-progress">{progress(sub)}</p>
       <ReleaseTimeline sub={sub} />
       {open && (
         <span className="row">

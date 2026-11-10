@@ -8,9 +8,9 @@ import { SetPriceForm } from "./SetPriceForm";
 export function ShareFlow() {
   const [approved, setApproved] = useState(false);
   return (
-    <>
+    <div className="share">
       <PostChecker onApproved={setApproved} />
       <SetPriceForm approved={approved} />
-    </>
+    </div>
   );
 }

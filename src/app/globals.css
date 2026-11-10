@@ -271,3 +271,29 @@ header nav { margin-left: auto; }
 .board-num.rep b { color: var(--cyan); }
 .tabs button.tab { border: 0; background: transparent; cursor: pointer; font-family: inherit; }
 .tabs button.tab.on { background: linear-gradient(135deg, #d92f54, #3b78ff); }
+
+/* ---- Share a post: dark glass forms ---- */
+.share h1 { margin-bottom: 4px; }
+.share .card {
+  position: relative; overflow: hidden; margin: 14px 0; padding: 18px 18px 16px;
+  border: 1px solid rgba(255,255,255,.09); border-left: 3px solid var(--accent); border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255,255,255,.06), rgba(255,255,255,.015) 45%, rgba(217,47,84,.06)), rgba(5,7,11,.72);
+  -webkit-backdrop-filter: blur(16px) saturate(1.3); backdrop-filter: blur(16px) saturate(1.3);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.16), inset 0 -1px 0 rgba(255,255,255,.03), 0 10px 30px rgba(0,0,0,.5);
+}
+.share .card::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 38%, rgba(255,255,255,.035) 48%, transparent 58%); }
+.share .card:nth-of-type(2) { border-left-color: var(--cyan); }
+.share .card .card { margin: 12px 0 0; padding: 12px; border-left-width: 1px; background: rgba(255,255,255,.04); box-shadow: none; }
+.share .card h3 { margin: 0 0 6px; font-size: 1.1rem; }
+.share label { display: block; margin: 10px 0; font-size: 13px; color: var(--muted); }
+.share input, .share textarea, .share select {
+  display: block; width: 100%; max-width: 560px; margin: 4px 0 0; padding: 10px 12px; border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.35); color: var(--fg);
+}
+.share input:focus, .share textarea:focus, .share select:focus { outline: none; border-color: var(--link); box-shadow: 0 0 0 3px rgba(106,162,255,.2); }
+.share .row { margin-top: 12px; }
+.share .btn:not(.ghost) { background: linear-gradient(135deg, rgba(217,47,84,.95), rgba(217,47,84,.75)); box-shadow: inset 0 1px 0 rgba(255,255,255,.35); border-radius: 999px; padding: 9px 18px; font-weight: 600; }
+.share .btn.ghost { border-radius: 999px; background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.14); }
+.share .tag { background: rgba(255,255,255,.05); }
+.share p[role="status"] { color: var(--cyan); }
+.share p[role="alert"] { color: #ff8a8a; }

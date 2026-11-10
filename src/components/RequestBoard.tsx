@@ -8,6 +8,7 @@ import { formatNear, getPrice } from "@/lib/contract";
 import { SOCIAL_CONTRACT, STORAGE_DEPOSIT, loadBoard } from "@/lib/social";
 import { LIMITS, buildOfferSet, buildRequestSet, validateOffer, validateRequest, type OfferPost, type RequestPost } from "@/lib/social-format";
 import { scanPost } from "@/lib/risk";
+import { requireAiApproval } from "@/lib/ai-gate";
 
 interface Card {
   req: RequestPost;
@@ -69,8 +70,11 @@ export function RequestBoard() {
     const scan = scanPost({ title: v.value.t, summary: v.value.d, steps: [], risks: "", risk: "low", capitalNeededNear: 0 });
     if (scan.verdict === "block") return setMsg("This looks unsafe to publish (it mentions something like a seed phrase, guaranteed returns or sending funds first). Please reword it.");
     setBusy(true);
-    setMsg("Waiting for wallet approval. A small storage deposit is attached and unused NEAR is refunded.");
+    setMsg("Running the AI scam review…");
     try {
+      const blocked = await requireAiApproval({ title: v.value.t, summary: v.value.d, steps: [], risks: "", risk: "low", capitalNeededNear: 0 });
+      if (blocked) return setMsg(blocked);
+      setMsg("Review passed. Waiting for wallet approval. A small storage deposit is attached and unused NEAR is refunded.");
       await callTo(SOCIAL_CONTRACT, "set", buildRequestSet(accountId, String(v.value.ts), v.value), STORAGE_DEPOSIT);
       setForm({ title: "", details: "", budget: "1" });
       setMsg("Request posted. It can take a few seconds to appear.");
@@ -90,8 +94,13 @@ export function RequestBoard() {
     setMsg("Checking that you have a monthly price set…");
     try {
       if (CONTRACT_CONFIGURED && !(await getPrice(accountId).catch(() => null))) {
-        setMsg("Set your monthly price first (share icon, top right) so learners can pay you. Then offer again.");
+        setMsg("Set your monthly price first (Share a post in the left menu) so learners can pay you. Then offer again.");
         return;
+      }
+      if (v.value.n) {
+        setMsg("Running the AI scam review…");
+        const blocked = await requireAiApproval({ title: "Offer to teach", summary: v.value.n, steps: [], risks: "", risk: "low", capitalNeededNear: 0 });
+        if (blocked) return setMsg(blocked);
       }
       setMsg("Waiting for wallet approval.");
       await callTo(SOCIAL_CONTRACT, "set", buildOfferSet(accountId, c.req.learner, c.req.id, v.value), STORAGE_DEPOSIT);

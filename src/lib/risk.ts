@@ -194,3 +194,18 @@ const ORDER: Record<Verdict, number> = { ok: 0, review: 1, block: 2 };
 export function stricter(a: Verdict, b: Verdict): Verdict {
   return ORDER[a] >= ORDER[b] ? a : b;
 }
+
+export interface AiOutcome {
+  available: boolean;
+  verdict?: Verdict;
+}
+
+/**
+ * The AI scam review is mandatory. The final verdict is the stricter of rules and AI, and a post is only
+ * approved when the AI actually reviewed it and the final verdict is not "block". If the AI could not run
+ * (no key, timeout, bad reply) nothing is approved: the check fails closed, never open.
+ */
+export function decide(rules: Verdict, ai: AiOutcome): { final: Verdict; approved: boolean } {
+  const final = ai.available && ai.verdict ? stricter(rules, ai.verdict) : rules;
+  return { final, approved: ai.available && !!ai.verdict && final !== "block" };
+}

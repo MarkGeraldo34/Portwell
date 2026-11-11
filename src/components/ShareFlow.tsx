@@ -1,16 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { PostChecker } from "./PostChecker";
+import { useEffect, useState } from "react";
+import { PostForm } from "./PostForm";
 import { SetPriceForm } from "./SetPriceForm";
+import { useWallet } from "./WalletProvider";
 
-/** Sharers must pass the AI scam review before they can set a price (and so before anyone can pay them). */
+/** A sharer must have a published post (which passed the AI scam review) before they can set a price. */
 export function ShareFlow() {
-  const [approved, setApproved] = useState(false);
+  const { accountId } = useWallet();
+  const [published, setPublished] = useState(false);
+
+  // A returning sharer who already has a post does not need to publish again to change their price.
+  useEffect(() => {
+    setPublished(false);
+    if (!accountId) return;
+    let cancelled = false;
+    fetch(`/api/posts?sharer=${encodeURIComponent(accountId)}`)
+      .then((r) => (r.ok ? r.json() : { posts: [] }))
+      .then((j: { posts?: unknown[] }) => {
+        if (!cancelled && (j.posts?.length ?? 0) > 0) setPublished(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId]);
+
   return (
     <div className="share">
-      <PostChecker onApproved={setApproved} />
-      <SetPriceForm approved={approved} />
+      <PostForm onPublished={() => setPublished(true)} />
+      <SetPriceForm approved={published} />
     </div>
   );
 }

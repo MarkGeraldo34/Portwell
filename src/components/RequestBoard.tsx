@@ -200,7 +200,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
             )}
             {mine && c.offers.length > 0 && (
               <p className="offer-prompt" role="note">
-                Before you subscribe: email the sharer you are interested in using the email icon, and wait for their reply. Subscribe on the site only after they have answered.
+                Before you subscribe: email the sharer you are interested in subscribing to their strategy, and wait for their reply. Subscribe on the site only after they have answered.
               </p>
             )}
 

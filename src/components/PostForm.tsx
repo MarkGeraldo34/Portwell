@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Buffer } from "buffer";
-import { upload } from "@vercel/blob/client";
+import { upload, uploadPresigned } from "@vercel/blob/client";
 import { useWallet } from "./WalletProvider";
 import { hashPost, normalizePost, POST_LIMITS, validateMedia, type PostInput } from "@/lib/post-format";
 import { proofMessage, RECIPIENT, type ProofKind } from "@/lib/proof-message";
@@ -65,6 +65,7 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
   const uploadProof = useRef<{ proof: Proof; at: number } | null>(null);
+  const uploadMode = useRef<"token" | "presigned" | null>(null);
 
   const say = (text: string, isBad = false) => {
     setMsg(text);
@@ -99,7 +100,12 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
           uploadProof.current = { proof: await sign("upload"), at: Date.now() };
         }
         say(`Uploading ${file.name}…`);
-        const blob = await upload(`media/${accountId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`, file, {
+        if (!uploadMode.current) {
+          const m = await fetch("/api/media/upload").then((r) => r.json()).catch(() => ({ mode: "token" }));
+          uploadMode.current = m.mode === "presigned" ? "presigned" : "token";
+        }
+        const send = uploadMode.current === "presigned" ? uploadPresigned : upload;
+        const blob = await send(`media/${accountId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`, file, {
           access: "public",
           handleUploadUrl: "/api/media/upload",
           clientPayload: JSON.stringify(uploadProof.current.proof),

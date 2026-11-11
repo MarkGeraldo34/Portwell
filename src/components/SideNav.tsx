@@ -93,7 +93,7 @@ export function SideNav() {
       {ITEMS.map((it) => {
         const on = it.match(path);
         return (
-          <Link key={it.href} href={it.href} className={on ? "side-item on" : "side-item"} aria-current={on ? "page" : undefined}>
+          <Link key={it.href} href={it.href} className={on ? "side-item on" : "side-item"} aria-label={it.label} title={it.label} aria-current={on ? "page" : undefined}>
             {it.icon}
             <span>{it.label}</span>
           </Link>

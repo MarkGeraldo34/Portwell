@@ -461,4 +461,4 @@ html:root body :is(header, .card, .post) .icon-btn:hover:not(:disabled) { border
 }
 /* Offer email + contact-first prompt */
 .offers li .contact-btn { margin-left: 2px; }
-.offer-prompt { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #ffd9a0; background: rgba(255,170,60,.12); border: 1px solid rgba(255,170,60,.35); }
+.offer-prompt { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #ff4d4d; background: rgba(255,77,77,.1); border: 1px solid rgba(255,77,77,.4); }

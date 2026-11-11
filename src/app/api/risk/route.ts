@@ -1,47 +1,81 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { decide, scanPost, type RiskInput } from "@/lib/risk";
 import { aiReview } from "@/lib/ai-review";
+import { hashPost, normalizePost, type PostInput } from "@/lib/post-format";
+import { verifyProof, type Proof } from "@/lib/publish-auth";
+import { realDeps } from "@/server/access";
+import { blobConfigured, blobProblem, listCards, savePost } from "@/server/blob-store";
 
-// Tiny in-memory limiter so a public endpoint cannot burn AI credits. Per server instance only.
+export const maxDuration = 60; // the AI review can take a while
+
 const hits = new Map<string, number[]>();
-const LIMIT = 10;
-const WINDOW_MS = 60_000;
-
 function limited(ip: string): boolean {
   const now = Date.now();
-  const recent = (hits.get(ip) ?? []).filter((t) => now - t < WINDOW_MS);
+  const recent = (hits.get(ip) ?? []).filter((t) => now - t < 60_000);
   recent.push(now);
   hits.set(ip, recent);
-  return recent.length > LIMIT;
-}
-
-function parse(body: unknown): RiskInput | null {
-  if (typeof body !== "object" || body === null) return null;
-  const b = body as Record<string, unknown>;
-  const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : null);
-  const title = str(b.title, 120);
-  const summary = str(b.summary, 1000);
-  const risks = str(b.risks, 1000);
-  if (title === null || summary === null || risks === null) return null;
-  if (!Array.isArray(b.steps) || b.steps.length > 12) return null;
-  const steps = b.steps.map((s) => str(s, 300));
-  if (steps.some((s) => s === null)) return null;
-  const risk = b.risk === "low" || b.risk === "medium" || b.risk === "high" ? b.risk : null;
-  const capital = typeof b.capitalNeededNear === "number" && b.capitalNeededNear >= 0 ? b.capitalNeededNear : null;
-  if (!risk || capital === null) return null;
-  return { title, summary, steps: steps as string[], risks, risk, capitalNeededNear: capital };
+  return recent.length > 6;
 }
 
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  if (limited(ip)) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  if (limited(ip)) return NextResponse.json({ error: "Too many requests. Wait a minute." }, { status: 429 });
 
-  const post = parse(await req.json().catch(() => null));
-  if (!post) return NextResponse.json({ error: "Invalid post" }, { status: 400 });
+  const body = (await req.json().catch(() => null)) as { post?: PostInput; auth?: Proof } | null;
+  if (!body?.post || !body.auth) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
 
-  const rules = scanPost(post);
-  const ai = await aiReview(post);
-  // The AI may only raise the verdict, and it is mandatory: if it could not run, nothing is approved.
+  // 1. Everything is validated again here. The browser's checks are only for convenience.
+  const norm = normalizePost(body.post);
+  if (!norm.ok) return NextResponse.json({ error: norm.error }, { status: 400 });
+  const post = norm.value;
+
+  // 2. The wallet must have signed exactly this content.
+  let proof;
+  try {
+    proof = await verifyProof(body.auth, "publish", realDeps, await hashPost(post));
+  } catch {
+    return NextResponse.json({ error: "Could not verify your wallet right now. Try again." }, { status: 503 });
+  }
+  if (!proof.ok) return NextResponse.json({ error: proof.error }, { status: proof.status });
+
+  // 3. The scam review is mandatory: rules plus AI. If the AI cannot run, nothing is published.
+  const input: RiskInput = {
+    title: post.title,
+    summary: post.summary,
+    steps: [...post.steps, ...post.media.filter((m) => !m.upload).map((m) => `Media link: ${m.url}`)],
+    risks: post.risks,
+    risk: post.risk,
+    capitalNeededNear: post.capitalNeededNear,
+  };
+  const rules = scanPost(input);
+  const ai = await aiReview(input);
   const { final, approved } = decide(rules.verdict, ai);
-  return NextResponse.json({ rules, ai, final, approved });
+  if (!ai.available) {
+    return NextResponse.json({ error: "The AI scam review is required and is unavailable right now, so nothing was published.", final, ai }, { status: 503 });
+  }
+  if (!approved) {
+    const why = [...rules.findings.map((f) => f.message), ...(ai.reasons ?? [])][0];
+    return NextResponse.json({ error: `The scam review blocked this post${why ? `: ${why}` : ""}.`, final, ai }, { status: 422 });
+  }
+
+  // Storage is checked last so the scam review always runs, whether or not storage is ready.
+  if (!blobConfigured()) {
+    return NextResponse.json({ error: `The post passed the scam review, but ${blobProblem()}, so it was not saved.` }, { status: 503 });
+  }
+  const card = await savePost(proof.accountId, post);
+  revalidatePath("/");
+  revalidatePath(`/sharers/${proof.accountId}`);
+  return NextResponse.json({ id: card.id, final });
+}
+
+/** Public list of a sharer's published cards (used to unlock the price form for returning sharers). */
+export async function GET(req: Request) {
+  const sharer = new URL(req.url).searchParams.get("sharer") ?? "";
+  if (!/^[a-z0-9._-]{2,64}$/.test(sharer) || !blobConfigured()) return NextResponse.json({ posts: [] });
+  try {
+    return NextResponse.json({ posts: (await listCards()).filter((c) => c.sharer === sharer).map((c) => c.id) });
+  } catch {
+    return NextResponse.json({ posts: [] });
+  }
 }

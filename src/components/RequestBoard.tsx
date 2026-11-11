@@ -185,7 +185,7 @@ export function RequestBoard({ mode }: { mode: "form" | "list" }) {
                       {o.price} NEAR / 30 days {o.price !== null && o.price <= c.req.budget ? "· in budget" : "· above budget"}
                     </span>
                     {o.note && <span className="offer-note">“{o.note}”</span>}
-                    <Link className="offer-link" href={`/sharers/${o.sharer}`}>View &amp; subscribe →</Link>
+                    {mine && <Link className="offer-link" href={`/sharers/${o.sharer}`}>View &amp; subscribe →</Link>}
                   </li>
                 ))}
               </ul>

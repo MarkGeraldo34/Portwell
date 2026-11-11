@@ -381,3 +381,76 @@ a.contact-btn:hover { border-color: var(--link); background: rgba(106,162,255,.1
 .btn.disabled { opacity: .5; pointer-events: none; }
 label.btn { display: inline-flex; align-items: center; color: var(--fg); cursor: pointer; position: relative; }
 .share label.btn { margin: 0; }
+/* ======================================================================
+   Light page, dark glass panels (palette from the logo: coral, blue, cyan)
+   The page itself is white. Every panel (header, side menu, cards, posts, tabs, notifications) stays dark glass.
+   Variables are light-page values here and are flipped back to the dark values inside the glass panels.
+   ====================================================================== */
+:root {
+  color-scheme: light;
+  --bg: #ffffff; --fg: #12141c; --muted: #5a6479; --card: rgba(255,255,255,.7); --line: rgba(18,20,28,.14);
+  --link: #2557d6; --cyan: #0c93a8; --accent: #d92f54;
+  --glass: linear-gradient(135deg, rgba(217,47,84,.22), rgba(59,120,255,.12) 55%, rgba(47,214,232,.12)), rgba(8,10,18,.9);
+  --glass-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 14px 34px -8px rgba(24,32,80,.38);
+}
+body { background: #fff; color: var(--fg); }
+
+/* soft logo-colour glow plus a faint dot grid (the logo is a dotted circle) behind everything */
+body::before {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(58vmax 44vmax at 6% -6%, rgba(217,47,84,.22), transparent 62%),
+    radial-gradient(54vmax 44vmax at 104% 8%, rgba(59,120,255,.20), transparent 62%),
+    radial-gradient(60vmax 48vmax at 72% 112%, rgba(47,214,232,.24), transparent 62%),
+    #fff;
+}
+body::after {
+  content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; opacity: .55;
+  background: radial-gradient(circle, rgba(18,20,28,.16) 1px, transparent 1.7px) 0 0 / 22px 22px;
+  -webkit-mask-image: linear-gradient(180deg, #000, transparent 70%); mask-image: linear-gradient(180deg, #000, transparent 70%);
+}
+.warp-fixed { display: none; }
+
+/* headings pick up the logo gradient */
+main h1 {
+  width: fit-content; max-width: 100%;
+  background: linear-gradient(90deg, #d92f54 0%, #3b78ff 68%, #13aebf 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent; -webkit-text-fill-color: transparent;
+}
+main h3 { color: var(--fg); }
+.banner { background: rgba(255,255,255,.75); color: #3b4258; }
+.ai-msg { color: #d11a3a; }
+
+/* dark glass panels: restore the dark-surface values inside them */
+html:root body :is(header, .sidenav, .card, .post, .tabs, .note > a, .note > div, .share .card, .subs .card) {
+  --fg: #eef1f7; --muted: #a6afc2; --line: rgba(255,255,255,.14); --bg: #07080b; --card: rgba(255,255,255,.05);
+  --link: #6aa2ff; --cyan: #2fd6e8;
+  color: var(--fg);
+  background: var(--glass);
+  border-color: rgba(255,255,255,.12);
+  -webkit-backdrop-filter: blur(16px) saturate(1.4); backdrop-filter: blur(16px) saturate(1.4);
+  box-shadow: var(--glass-shadow);
+}
+html:root body :is(.card, .post, .share .card, .subs .card) .card { background: rgba(255,255,255,.05); box-shadow: none; }
+html:root body :is(.card, .post, .share .card, .subs .card) .ai-msg { color: #ff6b6b; }
+html:root body .tabs { background: rgba(8,10,18,.88); }
+html:root body .note > a:hover { border-color: rgba(255,255,255,.3); }
+
+/* header: sticky dark glass bar with a logo-gradient edge */
+header {
+  position: sticky; top: 0; z-index: 60;
+  border-bottom: 1px solid transparent; border-image: linear-gradient(90deg, #d92f54, #3b78ff, #2fd6e8) 1;
+  border-top: 0; border-left: 0; border-right: 0;
+}
+@media (min-width: 901px) { .sidenav { top: 80px; } }
+
+/* buttons: coral to blue, like the logo */
+.btn:not(.ghost), .share .btn:not(.ghost), .subs .btn:not(.ghost) {
+  background: linear-gradient(135deg, #d92f54 0%, #8b3fd6 55%, #3b78ff 100%); color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.35), 0 6px 16px -6px rgba(59,120,255,.6);
+}
+.btn.ghost { color: var(--fg); background: rgba(255,255,255,.6); border-color: var(--line); }
+html:root body :is(header, .sidenav, .card, .post, .tabs) .btn.ghost { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.18); color: #eef1f7; }
+.icon-btn { background: rgba(255,255,255,.75); color: var(--fg); }
+html:root body :is(header, .card, .post) .icon-btn { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.18); color: #eef1f7; }
+html:root body :is(header, .card, .post) .icon-btn:hover:not(:disabled) { border-color: #6aa2ff; color: #2fd6e8; }

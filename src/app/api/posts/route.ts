@@ -19,7 +19,6 @@ function limited(ip: string): boolean {
 export async function POST(req: Request) {
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   if (limited(ip)) return NextResponse.json({ error: "Too many requests. Wait a minute." }, { status: 429 });
-  if (!blobConfigured()) return NextResponse.json({ error: "Post storage is not set up yet (Vercel Blob)." }, { status: 503 });
 
   const body = (await req.json().catch(() => null)) as { post?: PostInput; auth?: Proof } | null;
   if (!body?.post || !body.auth) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
@@ -58,6 +57,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: `The scam review blocked this post${why ? `: ${why}` : ""}.`, final, ai }, { status: 422 });
   }
 
+  // Storage is checked last so the scam review always runs, whether or not storage is ready.
+  if (!blobConfigured()) {
+    return NextResponse.json({ error: "The post passed the scam review, but post storage is not set up yet (Vercel Blob), so it was not saved." }, { status: 503 });
+  }
   const card = await savePost(proof.accountId, post);
   revalidatePath("/");
   revalidatePath(`/sharers/${proof.accountId}`);

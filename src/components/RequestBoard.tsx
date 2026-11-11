@@ -25,7 +25,7 @@ const ago = (ts: number) => {
   return `${Math.round(m / 1440)} d ago`;
 };
 
-export function RequestBoard({ mode }: { mode: "form" | "list" }) {
+export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; emails?: Record<string, string> }) {
   const { accountId, signIn, callTo } = useWallet();
   const [cards, setCards] = useState<Card[] | null>(null);
   const [loadErr, setLoadErr] = useState("");
@@ -185,10 +185,23 @@ export function RequestBoard({ mode }: { mode: "form" | "list" }) {
                       {o.price} NEAR / 30 days {o.price !== null && o.price <= c.req.budget ? "· in budget" : "· above budget"}
                     </span>
                     {o.note && <span className="offer-note">“{o.note}”</span>}
+                    {emails[o.sharer] && (
+                      <a className="contact-btn" href={`mailto:${emails[o.sharer]}`} rel="nofollow" title={`Email ${emails[o.sharer]}`} aria-label={`Email @${o.sharer}`}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <rect x="3" y="5" width="18" height="14" rx="2" />
+                          <path d="M3 7l9 6 9-6" />
+                        </svg>
+                      </a>
+                    )}
                     {mine && <Link className="offer-link" href={`/sharers/${o.sharer}`}>View &amp; subscribe →</Link>}
                   </li>
                 ))}
               </ul>
+            )}
+            {mine && c.offers.length > 0 && (
+              <p className="offer-prompt" role="note">
+                Before you subscribe: email the sharer you are interested in using the email icon, and wait for their reply. Subscribe on the site only after they have answered.
+              </p>
             )}
 
             <div className="post-foot">

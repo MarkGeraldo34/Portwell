@@ -30,12 +30,22 @@ function extractJson(text: string): unknown {
   }
 }
 
+// The form reviews a post first and the server reviews it again before saving. A short cache means the second
+// call is instant when it lands on the same server instance. Only successful reviews are cached.
+const CACHE_MS = 10 * 60 * 1000;
+const cache = new Map<string, { at: number; review: AiReview }>();
+const TIMEOUT_MS = 45_000;
+
 export async function aiReview(post: RiskInput): Promise<AiReview> {
   const key = process.env.NEAR_AI_API_KEY;
   if (!key) return { available: false, error: "NEAR_AI_API_KEY not set" };
 
+  const cacheKey = JSON.stringify(post);
+  const hit = cache.get(cacheKey);
+  if (hit && Date.now() - hit.at < CACHE_MS) return hit.review;
+
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25_000);
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
     const res = await fetch(`${BASE_URL}/chat/completions`, {
       method: "POST",
@@ -62,9 +72,14 @@ export async function aiReview(post: RiskInput): Promise<AiReview> {
     const reasons = Array.isArray(parsed.reasons)
       ? parsed.reasons.filter((r): r is string => typeof r === "string").slice(0, 4).map((r) => r.slice(0, 200))
       : [];
-    return { available: true, verdict: parsed.verdict as Verdict, reasons };
-  } catch {
-    return { available: false, error: "AI service unreachable or timed out" };
+    const review: AiReview = { available: true, verdict: parsed.verdict as Verdict, reasons };
+    if (cache.size > 200) cache.clear();
+    cache.set(cacheKey, { at: Date.now(), review });
+    return review;
+  } catch (e) {
+    if (controller.signal.aborted) return { available: false, error: `AI service timed out after ${TIMEOUT_MS / 1000}s (try a faster model via NEAR_AI_MODEL)` };
+    const code = (e as { cause?: { code?: string } })?.cause?.code ?? (e instanceof Error ? e.message : "");
+    return { available: false, error: `AI service unreachable${code ? ` (${String(code).slice(0, 60)})` : ""}` };
   } finally {
     clearTimeout(timer);
   }

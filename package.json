@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "test": "node --test src/lib/risk.test.ts src/lib/nep413.test.ts src/lib/unlock.test.ts src/lib/reputation.test.ts src/lib/social-format.test.ts src/lib/leaderboard.test.ts src/lib/notifications.test.ts"
+    "test": "node --test src/lib/risk.test.ts src/lib/nep413.test.ts src/lib/unlock.test.ts src/lib/reputation.test.ts src/lib/social-format.test.ts src/lib/leaderboard.test.ts src/lib/notifications.test.ts src/lib/post-format.test.ts src/lib/publish-auth.test.ts"
   },
   "dependencies": {
     "@near-js/crypto": "2.5.1",
@@ -16,11 +16,13 @@
     "@near-wallet-selector/meteor-wallet": "10.1.4",
     "@near-wallet-selector/modal-ui": "10.1.4",
     "@near-wallet-selector/my-near-wallet": "10.1.4",
+    "@vercel/blob": "^2.9.0",
     "borsh": "2.0.0",
     "buffer": "6.0.3",
     "next": "16.4.5",
     "react": "19.3.1",
     "react-dom": "19.3.1",
+    "react-icons": "^5.7.0",
     "server-only": "0.0.1"
   },
   "devDependencies": {

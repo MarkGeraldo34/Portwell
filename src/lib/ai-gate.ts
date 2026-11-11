@@ -10,8 +10,11 @@ export async function requireAiApproval(post: RiskInput): Promise<string | null>
     });
     if (r.status === 429) return "Too many checks in a minute. Wait a moment and try again.";
     if (!r.ok) return "The scam review could not run, so nothing was posted. Try again.";
-    const d = (await r.json()) as { approved?: boolean; final?: string; ai?: { available?: boolean; reasons?: string[] } };
-    if (!d.ai?.available) return "The AI scam review is required and is unavailable right now, so nothing was posted. Try again later.";
+    const d = (await r.json()) as { approved?: boolean; final?: string; ai?: { available?: boolean; reasons?: string[]; error?: string } };
+    if (!d.ai?.available) {
+      const why = d.ai?.error ? ` (${d.ai.error})` : "";
+      return `The AI scam review is required and is unavailable right now${why}, so nothing was posted. Try again later.`;
+    }
     if (!d.approved) {
       const why = d.ai.reasons?.[0];
       return `The scam review blocked this${why ? `: ${why}` : ""}. Please reword it.`;

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { authorize, isAccountId, type UnlockRequest } from "@/lib/unlock";
 import { realDeps } from "@/server/access";
-import { detailsForSharer } from "@/server/strategy-content";
-import { strategiesBySharer } from "@/data/strategies";
+import { cardsBySharer, detailsForSharerPosts } from "@/server/posts";
 
 // Small in-memory limiter. Each request makes several RPC calls, so keep it modest. Per instance only.
 const hits = new Map<string, number[]>();
@@ -32,7 +31,7 @@ export async function POST(req: Request) {
       ? (b as unknown as UnlockRequest)
       : null;
   if (!body) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
-  if (strategiesBySharer(body.sharer).length === 0) return NextResponse.json({ error: "Unknown sharer" }, { status: 404 });
+  if ((await cardsBySharer(body.sharer)).length === 0) return NextResponse.json({ error: "Unknown sharer" }, { status: 404 });
 
   let decision;
   try {
@@ -42,5 +41,5 @@ export async function POST(req: Request) {
   }
   if (!decision.ok) return NextResponse.json({ error: decision.error }, { status: decision.status });
 
-  return NextResponse.json({ reason: decision.reason, details: detailsForSharer(body.sharer) });
+  return NextResponse.json({ reason: decision.reason, details: await detailsForSharerPosts(body.sharer) });
 }

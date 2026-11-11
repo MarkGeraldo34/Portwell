@@ -1,49 +1,55 @@
-import { test } from "node:test";
-import assert from "node:assert/strict";
-import { KeyPair } from "@near-js/crypto";
-import { payloadHash } from "./nep413.ts";
-import { RECIPIENT } from "./unlock.ts";
-import { proofMessage, verifyProof, type ProofDeps } from "./publish-auth.ts";
-import { keyFrom, open, seal } from "./secret-box.ts";
+// Proves that a request comes from the owner of a NEAR account, using a NEP-413 signed message.
+// Used for publishing posts and for uploading media. All outside facts come in through Deps, so it is testable.
+import { verifySignedMessage } from "./nep413.ts";
+import { isAccountId } from "./unlock.ts";
+import { APP, RECIPIENT, proofMessage, type ProofKind } from "./proof-message.ts";
 
-const NOW = 1_800_000_000_000;
-const nonce = new Uint8Array(32).fill(7);
-const deps = (over: Partial<ProofDeps> = {}): ProofDeps => ({ hasKey: async () => true, now: () => NOW, ...over });
+export { proofMessage, type ProofKind };
 
-function sign(message: string, account = "sam.testnet") {
-  const kp = KeyPair.fromRandom("ed25519");
-  const { signature } = kp.sign(payloadHash(message, nonce, RECIPIENT));
-  return { accountId: account, publicKey: kp.getPublicKey().toString(), signature: Buffer.from(signature).toString("base64"), message, nonce: Buffer.from(nonce).toString("base64") };
+export const PROOF_MAX_AGE_MS = 10 * 60 * 1000;
+const MAX_FUTURE_MS = 2 * 60 * 1000;
+
+export interface Proof {
+  accountId: string;
+  publicKey: string;
+  signature: string; // base64
+  message: string; // JSON: {"app","action","account","hash"?,"iat"}
+  nonce: string; // base64, 32 bytes
 }
 
-test("a valid publish proof is accepted", async () => {
-  const p = sign(proofMessage("publish", "sam.testnet", NOW, "abc"));
-  assert.deepEqual(await verifyProof(p, "publish", deps(), "abc"), { ok: true, accountId: "sam.testnet" });
-});
+export interface ProofDeps {
+  hasKey(accountId: string, publicKey: string): Promise<boolean>;
+  now(): number;
+}
 
-test("a proof for different content, another action, or another account is rejected", async () => {
-  const p = sign(proofMessage("publish", "sam.testnet", NOW, "abc"));
-  assert.equal((await verifyProof(p, "publish", deps(), "different")).ok, false);
-  assert.equal((await verifyProof(p, "upload", deps())).ok, false);
-  const other = { ...p, accountId: "eve.testnet" };
-  assert.equal((await verifyProof(other, "publish", deps(), "abc")).ok, false);
-});
+export type ProofResult = { ok: true; accountId: string } | { ok: false; status: 400 | 401; error: string };
+const deny = (status: 400 | 401, error: string): ProofResult => ({ ok: false, status, error });
 
-test("expired, tampered and wrong-key proofs are rejected", async () => {
-  const old = sign(proofMessage("upload", "sam.testnet", NOW - 11 * 60 * 1000));
-  assert.equal((await verifyProof(old, "upload", deps())).ok, false);
-  const p = sign(proofMessage("upload", "sam.testnet", NOW));
-  assert.equal((await verifyProof({ ...p, signature: Buffer.alloc(64).toString("base64") }, "upload", deps())).ok, false);
-  assert.equal((await verifyProof(p, "upload", deps({ hasKey: async () => false }))).ok, false);
-  assert.equal((await verifyProof(p, "upload", deps())).ok, true);
-});
+export async function verifyProof(proof: Proof, kind: ProofKind, deps: ProofDeps, expectHash?: string): Promise<ProofResult> {
+  if (!isAccountId(proof?.accountId)) return deny(400, "Invalid account");
+  if (typeof proof.message !== "string" || proof.message.length > 400) return deny(400, "Invalid message");
+  if (typeof proof.signature !== "string" || typeof proof.publicKey !== "string") return deny(400, "Invalid signature");
 
-test("sealed content round-trips and rejects tampering or a different key", () => {
-  const key = keyFrom("token-a");
-  const sealed = seal(key, '{"steps":["a"]}');
-  assert.equal(open(key, sealed), '{"steps":["a"]}');
-  assert.equal(open(keyFrom("token-b"), sealed), null);
-  const raw = Buffer.from(sealed, "base64");
-  raw[raw.length - 1] ^= 1;
-  assert.equal(open(key, raw.toString("base64")), null);
-});
+  let m: { app?: unknown; action?: unknown; account?: unknown; hash?: unknown; iat?: unknown };
+  try {
+    m = JSON.parse(proof.message);
+  } catch {
+    return deny(400, "Invalid message");
+  }
+  if (m.app !== APP || m.action !== kind || m.account !== proof.accountId || typeof m.iat !== "number") {
+    return deny(400, "Message does not match this request");
+  }
+  if (kind === "publish" && (typeof m.hash !== "string" || m.hash !== expectHash)) {
+    return deny(400, "The signed content does not match the post");
+  }
+  const age = deps.now() - m.iat;
+  if (age > PROOF_MAX_AGE_MS || age < -MAX_FUTURE_MS) return deny(401, "Signature expired. Sign again.");
+
+  const nonce = Buffer.from(proof.nonce ?? "", "base64");
+  if (nonce.length !== 32) return deny(400, "Invalid nonce");
+
+  const valid = verifySignedMessage({ message: proof.message, nonce, recipient: RECIPIENT, publicKey: proof.publicKey, signature: proof.signature });
+  if (!valid) return deny(401, "Signature check failed");
+  if (!(await deps.hasKey(proof.accountId, proof.publicKey))) return deny(401, "That key does not belong to this account");
+  return { ok: true, accountId: proof.accountId };
+}

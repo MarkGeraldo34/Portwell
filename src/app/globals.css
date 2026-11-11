@@ -454,3 +454,8 @@ html:root body :is(header, .sidenav, .card, .post, .tabs) .btn.ghost { backgroun
 .icon-btn { background: rgba(255,255,255,.75); color: var(--fg); }
 html:root body :is(header, .card, .post) .icon-btn { background: rgba(255,255,255,.07); border-color: rgba(255,255,255,.18); color: #eef1f7; }
 html:root body :is(header, .card, .post) .icon-btn:hover:not(:disabled) { border-color: #6aa2ff; color: #2fd6e8; }
+/* Mobile bottom nav: icons only */
+@media (max-width: 900px) {
+  .side-item span { display: none; }
+  .side-item { padding: 12px 4px; }
+}

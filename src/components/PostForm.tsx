@@ -7,6 +7,7 @@ import { useWallet } from "./WalletProvider";
 import { hashPost, normalizePost, POST_LIMITS, validateMedia, type PostInput } from "@/lib/post-format";
 import { proofMessage, RECIPIENT, type ProofKind } from "@/lib/proof-message";
 import { scanPost } from "@/lib/risk";
+import { requireAiApproval } from "@/lib/ai-gate";
 
 interface Proof {
   accountId: string;
@@ -144,9 +145,13 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
 
     setBusy(true);
     try {
-      say("Waiting for your wallet to sign. This is free and sends no transaction.");
-      const auth = await sign("publish", await hashPost(norm.value));
+      // The AI scam review runs first and automatically, so a blocked post never costs a wallet signature.
       say("Running the AI scam review…");
+      const blocked = await requireAiApproval({ title: norm.value.title, summary: norm.value.summary, steps: norm.value.steps, risks: norm.value.risks, risk: norm.value.risk, capitalNeededNear: norm.value.capitalNeededNear });
+      if (blocked) return say(blocked, true);
+      say("AI review passed. Waiting for your wallet to sign. This is free and sends no transaction.");
+      const auth = await sign("publish", await hashPost(norm.value));
+      say("Publishing…");
       const res = await fetch("/api/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ post: input, auth }) });
       const json = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) return say(json.error ?? "Could not publish. Try again.", res.status === 422 || res.status === 503);

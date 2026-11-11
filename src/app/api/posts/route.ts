@@ -7,6 +7,8 @@ import { verifyProof, type Proof } from "@/lib/publish-auth";
 import { realDeps } from "@/server/access";
 import { blobConfigured, blobProblem, listCards, savePost } from "@/server/blob-store";
 
+export const maxDuration = 60; // the AI review can take a while
+
 const hits = new Map<string, number[]>();
 function limited(ip: string): boolean {
   const now = Date.now();

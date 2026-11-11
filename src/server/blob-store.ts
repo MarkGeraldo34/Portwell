@@ -12,8 +12,36 @@ export interface GatedContent {
   risks: string;
 }
 
-export const blobConfigured = () => !!process.env.BLOB_READ_WRITE_TOKEN;
-const key = () => keyFrom(process.env.BLOB_READ_WRITE_TOKEN ?? "");
+/**
+ * Credentials. Older Vercel Blob stores use a read-write token (BLOB_READ_WRITE_TOKEN, or another name ending in
+ * _READ_WRITE_TOKEN if you chose a custom prefix). Newer stores have no token: they sign in with Vercel's OIDC
+ * identity and only expose BLOB_STORE_ID. The SDK handles both, so we only check that one of them is present.
+ */
+export function blobToken(): string | undefined {
+  const direct = process.env.BLOB_READ_WRITE_TOKEN;
+  if (direct) return direct;
+  const name = Object.keys(process.env).find((k) => k.endsWith("_READ_WRITE_TOKEN") && process.env[k]);
+  return name ? process.env[name] : undefined;
+}
+
+/** True when the store signs in with Vercel OIDC (no read-write token). Uploads then use presigned URLs. */
+export const blobUsesOidc = () => !blobToken() && !!process.env.BLOB_STORE_ID;
+
+/**
+ * Secret used to encrypt the gated part of posts. CONTENT_SECRET is preferred. A read-write token also works as a
+ * secret, but BLOB_STORE_ID does not: it appears in every public blob URL, so it is not secret.
+ */
+const contentSecret = () => process.env.CONTENT_SECRET || blobToken();
+
+/** Why storage cannot be used, or null when it is ready. */
+export function blobProblem(): string | null {
+  if (!blobToken() && !process.env.BLOB_STORE_ID) return "post storage is not set up yet (Vercel Blob)";
+  if (!contentSecret()) return "CONTENT_SECRET is not set in Vercel (a random secret used to encrypt locked steps)";
+  return null;
+}
+
+export const blobConfigured = () => blobProblem() === null;
+const key = () => keyFrom(contentSecret() ?? "");
 
 const MAX_POSTS = 100;
 
@@ -22,9 +50,9 @@ export async function savePost(sharer: string, value: PostValue): Promise<PostCa
   const id = `${ts}-${Math.random().toString(36).slice(2, 8)}`;
   const gated: GatedContent = { steps: value.steps, risks: value.risks };
   // Gated content first: a card must never appear without its content.
-  await put(`private/${id}.bin`, seal(key(), JSON.stringify(gated)), { access: "public", contentType: "text/plain", addRandomSuffix: false });
+  await put(`private/${id}.bin`, seal(key(), JSON.stringify(gated)), { access: "public", contentType: "text/plain", addRandomSuffix: false, token: blobToken() });
   const card = cardFrom(value, id, sharer, ts);
-  await put(`posts/${id}.json`, JSON.stringify(card), { access: "public", contentType: "application/json", addRandomSuffix: false });
+  await put(`posts/${id}.json`, JSON.stringify(card), { access: "public", contentType: "application/json", addRandomSuffix: false, token: blobToken() });
   return card;
 }
 
@@ -33,7 +61,7 @@ export async function listCards(): Promise<PostCard[]> {
   let cursor: string | undefined;
   const blobs: { url: string }[] = [];
   do {
-    const page = await list({ prefix: "posts/", limit: 200, cursor });
+    const page = await list({ prefix: "posts/", limit: 200, cursor, token: blobToken() });
     blobs.push(...page.blobs);
     cursor = page.hasMore ? page.cursor : undefined;
   } while (cursor && blobs.length < 400);
@@ -55,7 +83,7 @@ export async function listCards(): Promise<PostCard[]> {
 export async function readGated(id: string): Promise<GatedContent | null> {
   if (!/^[0-9]+-[a-z0-9]{1,8}$/.test(id)) return null;
   try {
-    const page = await list({ prefix: `private/${id}.bin`, limit: 1 });
+    const page = await list({ prefix: `private/${id}.bin`, limit: 1, token: blobToken() });
     const blob = page.blobs[0];
     if (!blob) return null;
     const res = await fetch(blob.url, { cache: "no-store" });

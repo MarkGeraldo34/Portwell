@@ -5,11 +5,17 @@ import { useEffect, useId, useState } from "react";
 import { getStats, listSubscriptionsFor } from "@/lib/contract";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { reputation } from "@/lib/reputation";
+import type { Ethos } from "@/lib/ethos-types";
+import { SharerLinks } from "./SharerLinks";
 
 export interface FeedPost {
   id: string;
   sharer: string;
   title: string;
+  xHandle?: string;
+  email?: string;
+  ethos?: Ethos;
+  mediaCount?: number;
 }
 
 interface Numbers {
@@ -121,7 +127,10 @@ function Post({ post, n }: { post: FeedPost; n?: Numbers }) {
         </li>
       </ul>
 
+      <SharerLinks handle={post.xHandle} email={post.email} ethos={post.ethos} />
+
       <div className="post-foot">
+        {!!post.mediaCount && <span className="muted media-count">{post.mediaCount} media</span>}
         <Link className="post-cta" href={`/sharers/${post.sharer}`}>
           Subscribe →
         </Link>

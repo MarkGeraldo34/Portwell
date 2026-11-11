@@ -5,7 +5,7 @@ import { aiReview } from "@/lib/ai-review";
 import { hashPost, normalizePost, type PostInput } from "@/lib/post-format";
 import { verifyProof, type Proof } from "@/lib/publish-auth";
 import { realDeps } from "@/server/access";
-import { blobConfigured, listCards, savePost } from "@/server/blob-store";
+import { blobConfigured, blobProblem, listCards, savePost } from "@/server/blob-store";
 
 const hits = new Map<string, number[]>();
 function limited(ip: string): boolean {
@@ -59,7 +59,7 @@ export async function POST(req: Request) {
 
   // Storage is checked last so the scam review always runs, whether or not storage is ready.
   if (!blobConfigured()) {
-    return NextResponse.json({ error: "The post passed the scam review, but post storage is not set up yet (Vercel Blob), so it was not saved." }, { status: 503 });
+    return NextResponse.json({ error: `The post passed the scam review, but ${blobProblem()}, so it was not saved.` }, { status: 503 });
   }
   const card = await savePost(proof.accountId, post);
   revalidatePath("/");

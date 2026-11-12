@@ -494,3 +494,16 @@ html:root body :is(header, .card, .post) .icon-btn:hover:not(:disabled) { border
 .sealed-label b { color: #7fb0ff; font-weight: 600; }
 .unlock-card { position: relative; border: 1px solid transparent !important; background-image: linear-gradient(rgba(14,18,30,.92), rgba(14,18,30,.92)), linear-gradient(135deg, #2fd6e8, #3b78ff, #d92f54) !important; background-origin: border-box; background-clip: padding-box, border-box; }
 .unlock-kicker { display: inline-block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; background: linear-gradient(90deg, #2fd6e8, #3b78ff, #d92f54); -webkit-background-clip: text; background-clip: text; color: transparent; }
+/* Navigation activity badges: pulsing gradient dot on the icon + count pill */
+.side-ico { position: relative; display: inline-flex; flex: none; }
+.pulse-dot { position: absolute; top: -3px; right: -4px; width: 9px; height: 9px; border-radius: 50%; background: linear-gradient(135deg, #2fd6e8, #3b78ff 55%, #d92f54); box-shadow: 0 0 0 2px rgba(14,18,30,.95); }
+.pulse-dot::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 2px solid rgba(59,120,255,.7); animation: dot-ping 1.8s ease-out infinite; }
+@keyframes dot-ping { 0% { transform: scale(.5); opacity: .9; } 100% { transform: scale(1.5); opacity: 0; } }
+.count-badge { margin-left: auto; min-width: 22px; height: 22px; padding: 0 7px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; line-height: 1; color: #fff; background: linear-gradient(135deg, #3b78ff, #d92f54); box-shadow: 0 0 12px rgba(217,47,84,.45); font-variant-numeric: tabular-nums; }
+.side-item.on .count-badge { background: rgba(255,255,255,.22); box-shadow: none; }
+@media (max-width: 900px) {
+  .side-item { position: relative; }
+  .pulse-dot { display: none; }
+  .count-badge { position: absolute; top: 2px; left: 50%; margin: 0 0 0 6px; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; box-shadow: 0 0 0 2px rgba(14,18,30,.95), 0 0 10px rgba(217,47,84,.5); }
+}
+@media (prefers-reduced-motion: reduce) { .pulse-dot::after { animation: none; } }

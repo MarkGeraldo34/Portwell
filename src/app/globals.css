@@ -456,7 +456,7 @@ html:root body :is(header, .card, .post) .icon-btn { background: rgba(255,255,25
 html:root body :is(header, .card, .post) .icon-btn:hover:not(:disabled) { border-color: #6aa2ff; color: #2fd6e8; }
 /* Mobile bottom nav: icons only */
 @media (max-width: 900px) {
-  .side-item span { display: none; }
+  .side-item .side-label { display: none; }
   .side-item { padding: 12px 4px; }
 }
 /* Offer email + contact-first prompt */

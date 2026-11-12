@@ -7,6 +7,7 @@ import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { reputation } from "@/lib/reputation";
 import type { Ethos } from "@/lib/ethos-types";
 import { SharerLinks } from "./SharerLinks";
+import { AccountLink } from "./AccountLink";
 
 export interface FeedPost {
   id: string;
@@ -107,7 +108,7 @@ function Post({ post, n }: { post: FeedPost; n?: Numbers }) {
         <span className="avatar" aria-hidden="true">{post.sharer[0]?.toUpperCase()}</span>
         <div className="post-id">
           <h3 className="post-title">{post.title}</h3>
-          <span className="post-meta-id" title={post.sharer}>@{short(post.sharer)}</span>
+          <span className="post-meta-id"><AccountLink account={post.sharer} /></span>
         </div>
         <Gauge score={rep} />
       </div>

@@ -42,7 +42,7 @@ export default async function SharerPage({ params, searchParams }: { params: Pro
   for (const c of shown) if (c.media.length > 0) media[c.id] = <MediaGallery media={c.media} />;
 
   return (
-    <SubscribeProvider sharer={sharer}>
+    <SubscribeProvider sharer={sharer} expected={onlyPost && shown.length === 1 ? shown[0].capitalNeededNear : undefined}>
       <h1>{sharer}</h1>
       <SharerLinks handle={latest?.xHandle} email={latest?.email} ethos={ethos} />
       <SubscribePanel />

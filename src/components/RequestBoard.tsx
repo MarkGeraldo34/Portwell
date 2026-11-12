@@ -10,6 +10,7 @@ import { LIMITS, buildOfferSet, buildRequestSet, validateOffer, validateRequest,
 import { scanPost } from "@/lib/risk";
 import { requireAiApproval } from "@/lib/ai-gate";
 import { mailLink } from "@/lib/mail-link";
+import { AccountLink } from "./AccountLink";
 
 interface Card {
   req: RequestPost;
@@ -164,8 +165,8 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
               <span className="avatar" aria-hidden="true">{c.req.learner[0]?.toUpperCase()}</span>
               <div className="post-id">
                 <h3 className="post-title">{c.req.title}</h3>
-                <span className="post-meta-id" title={c.req.learner}>
-                  @{short(c.req.learner)} {c.req.ts ? `· ${ago(c.req.ts)}` : ""}
+                <span className="post-meta-id">
+                  <AccountLink account={c.req.learner} /> {c.req.ts ? `· ${ago(c.req.ts)}` : ""}
                 </span>
               </div>
               <div className="budget">
@@ -181,7 +182,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                   const addr = o.email || emails[o.sharer];
                   return (
                   <li key={o.sharer}>
-                    <span className="offer-who" title={o.sharer}>@{short(o.sharer)}</span>
+                    <span className="offer-who"><AccountLink account={o.sharer} /></span>
                     <span className={`chip${o.price === c.req.budget ? "" : " warn"}`}>
                       {o.price} NEAR / 30 days {o.price === c.req.budget ? "· matches your budget" : `· your budget is ${c.req.budget} NEAR`}
                     </span>

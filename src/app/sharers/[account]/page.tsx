@@ -9,14 +9,17 @@ import { getEthos } from "@/server/ethos";
 
 export const dynamic = "force-dynamic";
 
-export default async function SharerPage({ params }: { params: Promise<{ account: string }> }) {
+export default async function SharerPage({ params, searchParams }: { params: Promise<{ account: string }>; searchParams: Promise<{ post?: string }> }) {
   const { account } = await params;
+  const { post: onlyPost } = await searchParams;
   const sharer = decodeURIComponent(account);
   // Anyone who set a price in the escrow contract can be subscribed to, even without a published post yet
   // (for example a sharer who answered a learner's request). Only reject things that are not NEAR account ids.
   if (!/^[a-z0-9._-]{2,64}$/.test(sharer)) notFound();
   const cards = await cardsBySharer(sharer);
-  const shown = cards.filter(
+  // "View post" opens one post: show only that post's sealed content, not the sharer's other posts.
+  const pool = onlyPost ? cards.filter((c) => c.id === onlyPost) : cards;
+  const shown = pool.filter(
     (c) => scanPost({ title: c.title, summary: c.summary, steps: [], risks: "Risks are listed in the locked section.", risk: c.risk, capitalNeededNear: c.capitalNeededNear }).verdict !== "block",
   );
 
@@ -43,7 +46,7 @@ export default async function SharerPage({ params }: { params: Promise<{ account
       <h1>{sharer}</h1>
       <SharerLinks handle={latest?.xHandle} email={latest?.email} ethos={ethos} />
       <SubscribePanel />
-      {shown.length < cards.length && <p className="banner">{cards.length - shown.length} post(s) hidden by the scam check.</p>}
+      {shown.length < pool.length && <p className="banner">{pool.length - shown.length} post(s) hidden by the scam check.</p>}
       {shown.length === 0 ? (
         <section className="card">
           <p className="muted" style={{ margin: 0 }}>

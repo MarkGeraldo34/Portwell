@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Linkify } from "./AccountLink";
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
@@ -109,15 +110,16 @@ export function Notifications() {
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d={ICON[n.kind]} /></svg>
               </span>
               <span className="note-body">
-                <b>{n.title}</b>
-                <span>{n.detail}</span>
+                <b><Linkify text={n.title} /></b>
+                <span><Linkify text={n.detail} /></span>
+                {n.href && <Link className="note-open" href={n.href}>Open →</Link>}
               </span>
               <span className="note-time">{ago(n.ts)}</span>
             </>
           );
           return (
             <li key={n.id} className="note">
-              {n.href ? <Link href={n.href}>{body}</Link> : <div>{body}</div>}
+              <div>{body}</div>
             </li>
           );
         })}

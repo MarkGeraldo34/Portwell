@@ -19,12 +19,22 @@ const svg = (children: ReactNode) => (
 const ITEMS: { href: string; label: string; icon: ReactNode; badge?: BadgeKey; match: (p: string) => boolean }[] = [
   {
     href: "/",
-    label: "Strategies",
+    label: "Feed",
     match: (p) => p === "/" || p.startsWith("/sharers") || p.startsWith("/feed"),
     icon: svg(
       <>
         <path d="M2 4h6a4 4 0 0 1 4 4v13a3 3 0 0 0-3-3H2z" />
         <path d="M22 4h-6a4 4 0 0 0-4 4v13a3 3 0 0 1 3-3h7z" />
+      </>,
+    ),
+  },
+  {
+    href: "/my-strategies",
+    label: "My strategies",
+    match: (p) => p.startsWith("/my-strategies"),
+    icon: svg(
+      <>
+        <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
       </>,
     ),
   },

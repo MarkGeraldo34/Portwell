@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { Buffer } from "buffer";
 import { useWallet } from "./WalletProvider";
 import { VerdictTag } from "./RiskPanel";
+import { AccountLink } from "./AccountLink";
 import { SealedSubscribe } from "./SubscribePanel";
 import type { Verdict } from "@/lib/risk";
 import { APP, RECIPIENT } from "@/lib/unlock";
@@ -90,7 +91,7 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
                   <strong>Risk ({t.risk}):</strong> {d.risks}
                 </p>
                 <p className="muted">
-                  Proof wallet: {d.proofWallet ?? "none linked yet — treat unverified posts with extra care"}
+                  Proof wallet: {d.proofWallet ? <AccountLink account={d.proofWallet} full /> : "none linked yet — treat unverified posts with extra care"}
                 </p>
               </>
             ) : (

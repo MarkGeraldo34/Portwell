@@ -74,12 +74,17 @@ export function SubscribeProvider({ sharer, children }: { sharer: string; childr
 export const useSubscribe = () => useContext(Ctx);
 
 /** Subscribe button + status, for use inside the sealed post card. */
-export function SealedSubscribe() {
+export function SealedSubscribe({ withAmount = false }: { withAmount?: boolean }) {
   const sub = useSubscribe();
   if (!sub || !sub.price) return null;
   const { accountId, signIn, subscribed, sending, subscribe, msg } = sub;
   return (
     <div className="sealed-sub">
+      {withAmount && (
+        <p className="pay-line">
+          You will pay <b>{formatNear(sub.price)} NEAR</b> for 30 days, held in escrow and released in four weekly parts.
+        </p>
+      )}
       {accountId ? (
         <button className="btn" onClick={() => void subscribe()} disabled={subscribed || sending} style={subscribed || sending ? { opacity: 0.5, cursor: "not-allowed" } : undefined}>
           {subscribed ? "Subscribed ✓" : sending ? "Subscribing…" : `Subscribe · ${formatNear(sub.price)} NEAR / 30 days`}

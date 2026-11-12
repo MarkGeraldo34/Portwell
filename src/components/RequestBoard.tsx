@@ -27,7 +27,7 @@ const ago = (ts: number) => {
 };
 
 export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "mine"; emails?: Record<string, string> }) {
-  const { accountId, signIn, callTo } = useWallet();
+  const { accountId, signIn, call, callTo } = useWallet();
   const [cards, setCards] = useState<Card[] | null>(null);
   const [loadErr, setLoadErr] = useState("");
   const [form, setForm] = useState({ title: "", details: "", budget: "1" });
@@ -98,18 +98,15 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
     const v = validateOffer(note, offerEmail);
     if (!v.ok) return setMsg(v.error);
     setBusy(true);
-    setMsg("Checking that you have a monthly price set…");
+    setMsg("Preparing your offer…");
     try {
       if (CONTRACT_CONFIGURED) {
+        // Accepting the offer means accepting the learner's exact amount: the escrow price becomes their budget.
+        const want = parseNear(String(c.req.budget));
         const price = await getPrice(accountId).catch(() => null);
-        if (!price) {
-          setMsg("Set your monthly price first (Share post in the left menu) so learners can pay you. Then offer again.");
-          return;
-        }
-        // The learner subscribes at the sharer's contract price, so the offer only stands if that price is exactly the learner's budget.
-        if (BigInt(price) !== parseNear(String(c.req.budget))) {
-          setMsg(`This learner will pay ${c.req.budget} NEAR for a month, but your monthly price is ${formatNear(price, 4)} NEAR. Set your price to ${c.req.budget} NEAR (Share post in the left menu) to accept their amount, then offer again.`, true);
-          return;
+        if (!price || BigInt(price) !== want) {
+          setMsg(`Accepting ${c.req.budget} NEAR for a month. Approve setting your monthly price to ${c.req.budget} NEAR in your wallet…`);
+          await call("set_price", { price: want.toString() });
         }
       }
       if (v.value.n) {

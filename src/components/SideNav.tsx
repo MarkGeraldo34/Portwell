@@ -2,7 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useWallet } from "./WalletProvider";
+import { CONTRACT_CONFIGURED } from "@/lib/config";
+import { getOwner, listSubscriptionsFor, formatNear } from "@/lib/contract";
+import { loadBoard } from "@/lib/social";
+import { buildNotifications } from "@/lib/notifications";
+import { badgeText, countNewer, type BadgeKey } from "@/lib/unread";
 
 const svg = (children: ReactNode) => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -10,7 +16,7 @@ const svg = (children: ReactNode) => (
   </svg>
 );
 
-const ITEMS: { href: string; label: string; icon: ReactNode; match: (p: string) => boolean }[] = [
+const ITEMS: { href: string; label: string; icon: ReactNode; badge?: BadgeKey; match: (p: string) => boolean }[] = [
   {
     href: "/",
     label: "Strategies",
@@ -48,6 +54,7 @@ const ITEMS: { href: string; label: string; icon: ReactNode; match: (p: string) 
   {
     href: "/requests",
     label: "Requests",
+    badge: "requests",
     match: (p) => p === "/requests" || p.startsWith("/requests/"),
     icon: svg(
       <>
@@ -60,6 +67,7 @@ const ITEMS: { href: string; label: string; icon: ReactNode; match: (p: string) 
   {
     href: "/notifications",
     label: "Notifications",
+    badge: "notifications",
     match: (p) => p.startsWith("/notifications"),
     icon: svg(
       <>
@@ -85,17 +93,92 @@ const ITEMS: { href: string; label: string; icon: ReactNode; match: (p: string) 
   },
 ];
 
+const seenKey = (account: string, k: BadgeKey) => `portwell:seen:${account}:${k}`;
+const readSeen = (account: string, k: BadgeKey): number | null => {
+  try {
+    const v = window.localStorage.getItem(seenKey(account, k));
+    return v === null ? null : Number(v) || 0;
+  } catch {
+    return null;
+  }
+};
+const writeSeen = (account: string, k: BadgeKey, t: number) => {
+  try {
+    window.localStorage.setItem(seenKey(account, k), String(t));
+  } catch {
+    /* private mode: badges just reset on reload */
+  }
+};
+
+/** Counts of new activity since the person last opened each page. Polls once a minute. */
+function useBadges(path: string) {
+  const { accountId } = useWallet();
+  const [counts, setCounts] = useState<Record<BadgeKey, number>>({ notifications: 0, requests: 0 });
+
+  const refresh = useCallback(async () => {
+    if (!accountId) return setCounts({ notifications: 0, requests: 0 });
+    try {
+      const owner = CONTRACT_CONFIGURED ? await getOwner().catch(() => null) : null;
+      const isOwner = owner === accountId;
+      const [subs, board] = await Promise.all([
+        CONTRACT_CONFIGURED ? listSubscriptionsFor(accountId, { includeAll: isOwner }).catch(() => []) : Promise.resolve([]),
+        loadBoard(50).catch(() => []),
+      ]);
+      const notes = buildNotifications(accountId, subs, board.map(({ request, offers }) => ({ request, offers })), isOwner, (y) => formatNear(y, 2));
+      // First visit: everything personal counts as new, but old public requests do not.
+      let reqSeen = readSeen(accountId, "requests");
+      if (reqSeen === null) {
+        reqSeen = Date.now();
+        writeSeen(accountId, "requests", reqSeen);
+      }
+      const here = ITEMS.find((i) => i.badge && i.match(path))?.badge;
+      setCounts({
+        notifications: here === "notifications" ? 0 : countNewer(notes.map((n) => n.ts), readSeen(accountId, "notifications") ?? 0),
+        requests: here === "requests" ? 0 : countNewer(board.filter((b) => b.request.learner !== accountId).map((b) => b.request.ts), reqSeen),
+      });
+    } catch {
+      /* keep the previous numbers */
+    }
+  }, [accountId, path]);
+
+  // Opening a page marks it as seen.
+  useEffect(() => {
+    if (!accountId) return;
+    const here = ITEMS.find((i) => i.badge && i.match(path))?.badge;
+    if (here) {
+      writeSeen(accountId, here, Date.now());
+      setCounts((c) => ({ ...c, [here]: 0 }));
+    }
+  }, [accountId, path]);
+
+  useEffect(() => {
+    void refresh();
+    const t = setInterval(() => void refresh(), 60_000);
+    return () => clearInterval(t);
+  }, [refresh]);
+
+  return counts;
+}
+
 /** Left sidebar on desktop; becomes a bottom tab bar on phones. */
 export function SideNav() {
   const path = usePathname() ?? "/";
+  const counts = useBadges(path);
   return (
     <nav className="sidenav" aria-label="Main">
       {ITEMS.map((it) => {
         const on = it.match(path);
+        const n = it.badge ? counts[it.badge] : 0;
+        const text = badgeText(n);
+        const name = n > 0 ? `${it.label}, ${text} new` : it.label;
         return (
-          <Link key={it.href} href={it.href} className={on ? "side-item on" : "side-item"} aria-label={it.label} title={it.label} aria-current={on ? "page" : undefined}>
-            {it.icon}
-            <span>{it.label}</span>
+          <Link key={it.href} href={it.href} className={on ? "side-item on" : "side-item"} aria-label={name} title={name} aria-current={on ? "page" : undefined}>
+            <span className="side-ico">
+              {it.icon}
+              {n > 0 && <b className="pulse-dot" aria-hidden="true" />}
+            </span>
+            <span className="side-label">{it.label}</span>
+            {n > 0 && <b className="count-badge" aria-hidden="true">{text}</b>}
           </Link>
         );
       })}

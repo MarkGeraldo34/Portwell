@@ -12,6 +12,7 @@ export const POST_LIMITS = {
   handle: 15,
   email: 120,
   maxCapital: 100_000,
+  minCapital: 0.1,
 };
 
 export type Risk = "low" | "medium" | "high";
@@ -24,6 +25,8 @@ export interface MediaItem {
 }
 
 /** What the form collects. */
+import { parseDuration, validateDuration, type Duration } from "./duration.ts";
+
 export interface PostInput {
   title: string;
   summary: string;
@@ -31,6 +34,8 @@ export interface PostInput {
   risks: string;
   risk: string;
   capitalNeededNear: string;
+  durationN: string; // how long the sharer will share this strategy
+  durationUnit: string; // "days" | "months"
   xHandle: string;
   email: string;
   media: { url: string; upload?: boolean }[];
@@ -44,6 +49,7 @@ export interface PostValue {
   risks: string;
   risk: Risk;
   capitalNeededNear: number;
+  duration: Duration;
   xHandle: string;
   email: string;
   media: MediaItem[];
@@ -58,6 +64,7 @@ export interface PostCard {
   summary: string;
   risk: Risk;
   capitalNeededNear: number;
+  duration?: Duration; // missing on posts made before durations existed
   steps: number; // how many steps, not the steps themselves
   xHandle?: string;
   email?: string;
@@ -136,7 +143,12 @@ export function normalizePost(input: PostInput): Valid<PostValue> {
   const capText = clean(input.capitalNeededNear);
   const capital = Number(capText);
   if (!/^\d+(\.\d{1,4})?$/.test(capText) || !Number.isFinite(capital) || capital > POST_LIMITS.maxCapital)
-    return { ok: false, error: "Capital needed must be a number in NEAR, e.g. 0 or 5." };
+    return { ok: false, error: "Capital needed must be a number in NEAR, e.g. 1 or 5." };
+  // This amount is also the monthly price learners pay, and the escrow contract's minimum price is 0.1 NEAR.
+  if (capital < POST_LIMITS.minCapital) return { ok: false, error: `Capital needed is the amount learners pay each month: at least ${POST_LIMITS.minCapital} NEAR.` };
+
+  const duration = validateDuration(input.durationN, input.durationUnit);
+  if (!duration.ok) return duration;
 
   const handle = validateHandle(input.xHandle);
   if (!handle.ok) return handle;
@@ -157,13 +169,13 @@ export function normalizePost(input: PostInput): Valid<PostValue> {
 
   return {
     ok: true,
-    value: { title, summary, steps, risks, risk: input.risk, capitalNeededNear: capital, xHandle: handle.value, email: email.value, media },
+    value: { title, summary, steps, risks, risk: input.risk, capitalNeededNear: capital, duration: duration.value, xHandle: handle.value, email: email.value, media },
   };
 }
 
 /** SHA-256 (hex) of the normalised post. The wallet signs this, so a signature cannot be reused for other content. */
 export async function hashPost(p: PostValue): Promise<string> {
-  const canonical = JSON.stringify([p.title, p.summary, p.steps, p.risks, p.risk, p.capitalNeededNear, p.xHandle, p.email, p.media.map((m) => [m.kind, m.url, m.upload])]);
+  const canonical = JSON.stringify([p.title, p.summary, p.steps, p.risks, p.risk, p.capitalNeededNear, p.duration.n, p.duration.unit, p.xHandle, p.email, p.media.map((m) => [m.kind, m.url, m.upload])]);
   const digest = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
   return Array.from(new Uint8Array(digest), (b) => b.toString(16).padStart(2, "0")).join("");
 }
@@ -177,6 +189,7 @@ export function cardFrom(p: PostValue, id: string, sharer: string, ts: number): 
     summary: p.summary,
     risk: p.risk,
     capitalNeededNear: p.capitalNeededNear,
+    duration: p.duration,
     steps: p.steps.length,
     xHandle: p.xHandle,
     email: p.email,
@@ -197,6 +210,7 @@ export function parseCard(raw: unknown): PostCard | null {
   const capital = Number(r.capitalNeededNear);
   const steps = Number(r.steps);
   if (!Number.isFinite(capital) || capital < 0 || !Number.isInteger(steps) || steps < 0) return null;
+  const duration = parseDuration(r.duration);
   const handle = typeof r.xHandle === "string" ? validateHandle(r.xHandle) : null;
   const email = typeof r.email === "string" ? validateEmail(r.email) : null;
   const media: MediaItem[] = [];
@@ -216,6 +230,7 @@ export function parseCard(raw: unknown): PostCard | null {
     risk: r.risk,
     capitalNeededNear: capital,
     steps,
+    ...(duration ? { duration } : {}),
     ...(handle?.ok ? { xHandle: handle.value } : {}),
     ...(email?.ok ? { email: email.value } : {}),
     media,

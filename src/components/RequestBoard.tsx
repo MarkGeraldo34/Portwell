@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
-import { formatNear, getPrice, parseNear } from "@/lib/contract";
+import { formatNear, getPrice } from "@/lib/contract";
 import { SOCIAL_CONTRACT, STORAGE_DEPOSIT, loadBoard } from "@/lib/social";
 import { LIMITS, buildOfferSet, buildRequestSet, validateOffer, validateRequest, type OfferPost, type RequestPost } from "@/lib/social-format";
 import { scanPost } from "@/lib/risk";
@@ -27,7 +27,7 @@ const ago = (ts: number) => {
 };
 
 export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "mine"; emails?: Record<string, string> }) {
-  const { accountId, signIn, call, callTo } = useWallet();
+  const { accountId, signIn, callTo } = useWallet();
   const [cards, setCards] = useState<Card[] | null>(null);
   const [loadErr, setLoadErr] = useState("");
   const [form, setForm] = useState({ title: "", details: "", budget: "1" });
@@ -100,15 +100,6 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
     setBusy(true);
     setMsg("Preparing your offer…");
     try {
-      if (CONTRACT_CONFIGURED) {
-        // Accepting the offer means accepting the learner's exact amount: the escrow price becomes their budget.
-        const want = parseNear(String(c.req.budget));
-        const price = await getPrice(accountId).catch(() => null);
-        if (!price || BigInt(price) !== want) {
-          setMsg(`Accepting ${c.req.budget} NEAR for a month. Approve setting your monthly price to ${c.req.budget} NEAR in your wallet…`);
-          await call("set_price", { price: want.toString() });
-        }
-      }
       if (v.value.n) {
         setMsg("Running the AI scam review…");
         const blocked = await requireAiApproval({ title: "Offer to teach", summary: v.value.n, steps: [], risks: "", risk: "low", capitalNeededNear: 0 });
@@ -192,7 +183,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                   <li key={o.sharer}>
                     <span className="offer-who" title={o.sharer}>@{short(o.sharer)}</span>
                     <span className={`chip${o.price === c.req.budget ? "" : " warn"}`}>
-                      {o.price} NEAR / 30 days {o.price === c.req.budget ? "· matches your budget" : "· not at the requested amount"}
+                      {o.price} NEAR / 30 days {o.price === c.req.budget ? "· matches your budget" : `· your budget is ${c.req.budget} NEAR`}
                     </span>
                     {o.note && <span className="offer-note">“{o.note}”</span>}
                     {addr && (
@@ -201,8 +192,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                         <img src="/gmail-logo.png" alt="" width={18} height={18} />
                       </a>
                     )}
-                    {mine && o.price === c.req.budget && <Link className="offer-link" href={`/sharers/${o.sharer}`}>View &amp; subscribe →</Link>}
-                    {mine && o.price !== c.req.budget && <span className="offer-note">This sharer's price differs from your {c.req.budget} NEAR budget, so you can't subscribe through this request.</span>}
+                    {mine && <Link className="offer-link" href={`/sharers/${o.sharer}`}>View &amp; subscribe →</Link>}
                   </li>
                   );
                 })}
@@ -224,7 +214,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                 <div className="offer-box">
                   <input type="email" required value={offerEmail} maxLength={120} placeholder="Your email (required, the learner will write to you)" autoComplete="email" onChange={(e) => setOfferEmail(e.target.value)} />
                   <input value={note} maxLength={LIMITS.note} placeholder="Short note (optional)" onChange={(e) => setNote(e.target.value)} />
-                  <button className="btn" disabled={busy} onClick={() => void offer(c)}>Send offer</button>
+                  <button className="btn" disabled={busy} onClick={() => void offer(c)}>Offer to teach</button>
                   <button className="btn ghost" onClick={() => setOffering(null)}>Cancel</button>
                 </div>
               ) : (

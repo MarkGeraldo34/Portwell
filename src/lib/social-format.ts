@@ -5,6 +5,7 @@
 // Anyone can read every account's tree with a wildcard, e.g. "*/portwell/request/*".
 
 import { validateEmail } from "./post-format.ts";
+import { parseDuration, validateDuration, type Duration } from "./duration.ts";
 
 export const APP = "portwell";
 export const REQUEST_KEYS = [`*/${APP}/request/*`];
@@ -18,6 +19,7 @@ export interface RequestValue {
   t: string; // what the learner wants to learn
   d: string; // details
   b: string; // budget in NEAR, as a plain decimal string
+  du: Duration; // how long the learner will pay for
   ts: number; // client time, display and sorting only
 }
 export interface OfferValue {
@@ -32,6 +34,7 @@ export interface RequestPost {
   title: string;
   details: string;
   budget: number;
+  duration: Duration | null; // null on older requests
   ts: number;
 }
 export interface OfferPost {
@@ -45,7 +48,7 @@ type Valid<T> = { ok: true; value: T } | { ok: false; error: string };
 
 const clean = (s: string) => s.replace(/[\u0000-\u001f\u007f]+/g, " ").replace(/\s+/g, " ").trim();
 
-export function validateRequest(input: { title: string; details: string; budget: string }, now = Date.now()): Valid<RequestValue> {
+export function validateRequest(input: { title: string; details: string; budget: string; durationN: string; durationUnit: string }, now = Date.now()): Valid<RequestValue> {
   const t = clean(input.title);
   const d = clean(input.details);
   const budget = Number(input.budget);
@@ -56,7 +59,9 @@ export function validateRequest(input: { title: string; details: string; budget:
     return { ok: false, error: "Budget must be a number in NEAR, e.g. 1 or 0.5." };
   if (budget < LIMITS.minBudget) return { ok: false, error: `The minimum budget is ${LIMITS.minBudget} NEAR.` };
   if (budget > LIMITS.maxBudget) return { ok: false, error: "That budget is too large." };
-  return { ok: true, value: { v: 1, t, d, b: String(budget), ts: now } };
+  const du = validateDuration(input.durationN, input.durationUnit);
+  if (!du.ok) return du;
+  return { ok: true, value: { v: 1, t, d, b: String(budget), du: du.value, ts: now } };
 }
 
 export function validateOffer(note: string, email: string, now = Date.now()): Valid<OfferValue> {
@@ -107,7 +112,7 @@ export function parseRequests(tree: unknown): RequestPost[] {
     const title = str(value.t, LIMITS.title);
     const budget = Number(value.b);
     if (title.length < 5 || !/^\d+$/.test(id) || !Number.isFinite(budget) || budget < LIMITS.minBudget || budget > LIMITS.maxBudget) continue;
-    out.push({ learner: account, id, title, details: str(value.d, LIMITS.details), budget, ts: typeof value.ts === "number" ? value.ts : Number(id) });
+    out.push({ learner: account, id, title, details: str(value.d, LIMITS.details), budget, duration: parseDuration(value.du), ts: typeof value.ts === "number" ? value.ts : Number(id) });
   }
   return out.sort((a, b) => b.ts - a.ts || a.id.localeCompare(b.id));
 }

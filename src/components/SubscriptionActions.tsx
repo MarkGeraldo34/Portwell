@@ -38,7 +38,7 @@ function Row({
   const isLearner = sub.learner === me;
   const open = sub.status === "Active";
   return (
-    <div className="card sub-card">
+    <div className={`card sub-card${open ? " is-active" : " is-settled"}`}>
       <div className="sub-head">
         <strong>Subscription #{sub.id}</strong>
         <span className={`tag status-${sub.status.toLowerCase()}`}>{sub.status}</span>
@@ -63,14 +63,17 @@ function Row({
             </button>
           )}
           {isLearner && (
-            <>
-              <button className="btn ghost" onClick={() => onAct({ method: "cancel" }, sub.id)}>
-                Cancel
-              </button>
-              <button className="btn ghost" onClick={() => onAct({ method: "dispute" }, sub.id)}>
-                Dispute
-              </button>
-            </>
+            <details className="more-actions">
+              <summary>More actions</summary>
+              <div className="more-menu">
+                <button className="btn ghost muted-act" title="Cancel and get unreleased weeks refunded" onClick={() => onAct({ method: "cancel" }, sub.id)}>
+                  Refund (cancel)
+                </button>
+                <button className="btn ghost muted-act" title="Pause releases and ask the owner to decide" onClick={() => onAct({ method: "dispute" }, sub.id)}>
+                  Dispute
+                </button>
+              </div>
+            </details>
           )}
         </span>
       )}

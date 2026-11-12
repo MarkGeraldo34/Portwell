@@ -26,7 +26,7 @@ const ago = (ts: number) => {
   return `${Math.round(m / 1440)} d ago`;
 };
 
-export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; emails?: Record<string, string> }) {
+export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "mine"; emails?: Record<string, string> }) {
   const { accountId, signIn, callTo } = useWallet();
   const [cards, setCards] = useState<Card[] | null>(null);
   const [loadErr, setLoadErr] = useState("");
@@ -132,7 +132,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
   }
 
   // Request strategy shows only your own requests (and the offers you got); Requests shows everyone's.
-  const shown = mode === "form" ? cards?.filter((c) => c.req.learner === accountId) : cards;
+  const shown = mode !== "list" ? cards?.filter((c) => c.req.learner === accountId) : cards;
 
   return (
     <>
@@ -160,11 +160,11 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
         {msg && <p className={bad ? "ai-msg" : "muted"} role={bad ? "alert" : "status"} style={{ marginBottom: 0 }}>{msg}</p>}
       </section>
       )}
-      {mode === "list" && msg && <p className={bad ? "ai-msg" : "muted"} role={bad ? "alert" : "status"}>{msg}</p>}
+      {mode !== "form" && msg && <p className={bad ? "ai-msg" : "muted"} role={bad ? "alert" : "status"}>{msg}</p>}
 
       {cards === null && <p className="muted">Loading requests…</p>}
       {loadErr && <p className="muted">Could not load requests right now ({loadErr}). Try again in a moment.</p>}
-      {shown?.length === 0 && !loadErr && <p className="muted">{mode === "form" ? "You have not requested a strategy yet." : "No requests yet. Learners who ask for a strategy will show up here."}</p>}
+      {shown?.length === 0 && !loadErr && <p className="muted">{mode !== "list" ? (accountId ? "You have not requested a strategy yet." : "Connect your wallet to see your requests.") : "No requests yet. Learners who ask for a strategy will show up here."}</p>}
 
       {mode === "form" && shown && shown.length > 0 && <h2 className="board-title">Your requests</h2>}
       {shown?.map((c) => {

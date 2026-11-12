@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { SubscribePanel } from "@/components/SubscribePanel";
+import { SubscribePanel, SubscribeProvider } from "@/components/SubscribePanel";
 import { LockedStrategies } from "@/components/LockedStrategies";
 import { MediaGallery } from "@/components/MediaGallery";
 import { SharerLinks } from "@/components/SharerLinks";
@@ -39,10 +39,10 @@ export default async function SharerPage({ params }: { params: Promise<{ account
   for (const c of shown) if (c.media.length > 0) media[c.id] = <MediaGallery media={c.media} />;
 
   return (
-    <>
+    <SubscribeProvider sharer={sharer}>
       <h1>{sharer}</h1>
       <SharerLinks handle={latest?.xHandle} email={latest?.email} ethos={ethos} />
-      <SubscribePanel sharer={sharer} />
+      <SubscribePanel />
       {shown.length < cards.length && <p className="banner">{cards.length - shown.length} post(s) hidden by the scam check.</p>}
       {shown.length === 0 ? (
         <section className="card">
@@ -56,6 +56,6 @@ export default async function SharerPage({ params }: { params: Promise<{ account
           <LockedStrategies sharer={sharer} teasers={teasers} media={media} />
         </>
       )}
-    </>
+    </SubscribeProvider>
   );
 }

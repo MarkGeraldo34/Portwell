@@ -26,7 +26,7 @@ test("a request is written only under the signer's own account, as JSON text, wi
 });
 
 test("an offer is keyed by learner and request id, under the sharer's own account", () => {
-  const s = buildOfferSet("sam.testnet", "alice.testnet", "17", { v: 1, n: "hi", ts: 1 });
+  const s = buildOfferSet("sam.testnet", "alice.testnet", "17", { v: 1, n: "hi", e: "sam@example.com", ts: 1 });
   assert.deepEqual(Object.keys(s.data), ["sam.testnet"]);
   const offers = (s.data["sam.testnet"] as { portwell: { offer: Record<string, string> } }).portwell.offer;
   assert.deepEqual(Object.keys(offers), [offerId("alice.testnet", "17")]);
@@ -61,5 +61,13 @@ test("parseOffers returns only offers for the given request", () => {
 });
 
 test("offer note limit", () => {
-  assert.equal(validateOffer("x".repeat(141)).ok, false);
+  assert.equal(validateOffer("x".repeat(141), "sam@example.com").ok, false);
+});
+
+test("an offer needs a valid email", () => {
+  assert.equal(validateOffer("hi", "").ok, false);
+  assert.equal(validateOffer("hi", "not-an-email").ok, false);
+  const ok = validateOffer("hi", " Sam@Example.com ", 5);
+  assert.ok(ok.ok);
+  if (ok.ok) assert.deepEqual(ok.value, { v: 1, n: "hi", e: "sam@example.com", ts: 5 });
 });

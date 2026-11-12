@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Buffer } from "buffer";
 import { useWallet } from "./WalletProvider";
 import { VerdictTag } from "./RiskPanel";
@@ -23,7 +23,7 @@ interface Detail {
   proofWallet: string | null;
 }
 
-export function LockedStrategies({ sharer, teasers }: { sharer: string; teasers: Teaser[] }) {
+export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: string; teasers: Teaser[]; media?: Record<string, ReactNode> }) {
   const { accountId, signIn, signMessage } = useWallet();
   const [details, setDetails] = useState<Detail[] | null>(null);
   const [msg, setMsg] = useState("");
@@ -62,17 +62,6 @@ export function LockedStrategies({ sharer, teasers }: { sharer: string; teasers:
 
   return (
     <>
-      {!details && (
-        <div className="card">
-          <p>
-            <strong>Locked.</strong> Steps, risk notes and the proof wallet are shown only to active subscribers.
-          </p>
-          <button className="btn" onClick={unlock} disabled={busy}>
-            {accountId ? "Unlock with wallet" : "Connect wallet to unlock"}
-          </button>
-          {msg && <p className="muted">{msg}</p>}
-        </div>
-      )}
       {teasers.map((t) => {
         const d = details?.find((x) => x.id === t.id);
         return (
@@ -87,6 +76,7 @@ export function LockedStrategies({ sharer, teasers }: { sharer: string; teasers:
               <span>{t.capitalNeededNear} NEAR to start</span>
             </p>
             <p style={{ margin: "0 0 10px", fontSize: "14.5px" }}>{t.summary}</p>
+            {media[t.id]}
             {d ? (
               <>
                 <ol>
@@ -102,11 +92,26 @@ export function LockedStrategies({ sharer, teasers }: { sharer: string; teasers:
                 </p>
               </>
             ) : (
-              <p className="post-lock">🔒 {t.steps} steps, risk notes and proof wallet unlock with a subscription.</p>
+              <div className="sealed" aria-label={`${t.steps} steps, risk notes and proof wallet are sealed until you subscribe`}>
+                <span className="sealed-bars" aria-hidden="true"><i /><i /><i /></span>
+                <span className="sealed-label">{t.steps} steps · risk notes · proof wallet <b>sealed until you subscribe</b></span>
+              </div>
             )}
           </article>
         );
       })}
+      {!details && (
+        <div className="card unlock-card">
+          <span className="unlock-kicker">Sealed content</span>
+          <p style={{ margin: "6px 0 12px" }}>
+            Steps, risk notes and the proof wallet are shown only to active subscribers. Subscribe above, then sign with your wallet to open them.
+          </p>
+          <button className="btn" onClick={unlock} disabled={busy}>
+            {accountId ? "Unlock with wallet" : "Connect wallet to unlock"}
+          </button>
+          {msg && <p className="muted">{msg}</p>}
+        </div>
+      )}
     </>
   );
 }

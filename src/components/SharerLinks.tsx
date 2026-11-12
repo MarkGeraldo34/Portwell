@@ -1,4 +1,3 @@
-import { FaXTwitter } from "react-icons/fa6";
 import type { Ethos } from "@/lib/ethos-types";
 import { mailLink } from "@/lib/mail-link";
 
@@ -11,7 +10,8 @@ export function SharerLinks({ handle, email, ethos }: { handle?: string; email?:
     <div className="contact">
       {handle && (
         <a className="contact-btn" href={`https://x.com/${encodeURIComponent(handle)}`} target="_blank" rel="noopener noreferrer nofollow" title={`@${handle} on X`} aria-label={`@${handle} on X`}>
-          <FaXTwitter size={16} aria-hidden="true" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/x-logo.png" alt="" width={18} height={18} />
         </a>
       )}
       {handle && ethos && ethos.state !== "none" && (
@@ -30,10 +30,8 @@ export function SharerLinks({ handle, email, ethos }: { handle?: string; email?:
       )}
       {email && (
         <a className="contact-btn" href={mailLink(email).href} target={mailLink(email).webmail ? "_blank" : undefined} rel="noopener noreferrer nofollow" title={`Email ${email}`} aria-label={`Email ${email}`}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-            <rect x="3" y="5" width="18" height="14" rx="2" />
-            <path d="M3 7l9 6 9-6" />
-          </svg>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/gmail-logo.png" alt="" width={18} height={18} />
         </a>
       )}
     </div>

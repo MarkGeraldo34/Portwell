@@ -2,9 +2,9 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { useWallet } from "./WalletProvider";
-import { formatNear, getPrice, getStats, listSubscriptionsFor, type SharerStats } from "@/lib/contract";
+import { formatNear, getPrice, parseNear, getStats, listSubscriptionsFor, type SharerStats } from "@/lib/contract";
 
-function useSubscribeState(sharer: string) {
+function useSubscribeState(sharer: string, expected?: number) {
   const { accountId, call, signIn } = useWallet();
   const [price, setPrice] = useState<string | null | undefined>(undefined);
   const [stats, setStats] = useState<SharerStats | null>(null);
@@ -38,14 +38,19 @@ function useSubscribeState(sharer: string) {
     getStats(sharer).then(setStats).catch(() => setStats(null));
   }, [sharer]);
 
+  // When the page is for one post, the amount to pay must be that post's "Capital needed" exactly.
+  const expectedYocto = expected === undefined ? null : parseNear(String(expected));
+  const mismatch = !!price && expectedYocto !== null && BigInt(price) !== expectedYocto;
+
   async function subscribe() {
-    if (!price || sending || subscribed) return;
+    if (!price || sending || subscribed || mismatch) return;
     setSending(true);
     setMsg("Waiting for wallet approval…");
     try {
       // Re-read the price right before paying: the deposit must equal the sharer's current price exactly.
       const current = await getPrice(sharer);
       if (!current) throw new Error("This sharer has no price set anymore.");
+      if (expectedYocto !== null && BigInt(current) !== expectedYocto) throw new Error(`This post asks for ${expected} NEAR but the sharer's price is ${formatNear(current)} NEAR, so you cannot subscribe until the sharer updates it.`);
       if (current !== price) {
         setPrice(current);
         throw new Error(`The sharer changed their price to ${formatNear(current)} NEAR. Review it and press Subscribe again.`);
@@ -59,15 +64,15 @@ function useSubscribeState(sharer: string) {
       setSending(false);
     }
   }
-  return { sharer, accountId, signIn, price, stats, msg, loadError, subscribed, sending, subscribe };
+  return { sharer, expected, mismatch, accountId, signIn, price, stats, msg, loadError, subscribed, sending, subscribe };
 }
 
 type SubState = ReturnType<typeof useSubscribeState>;
 const Ctx = createContext<SubState | null>(null);
 
 /** One subscription state shared by the Monthly subscription card and the button on each sealed post. */
-export function SubscribeProvider({ sharer, children }: { sharer: string; children: ReactNode }) {
-  const state = useSubscribeState(sharer);
+export function SubscribeProvider({ sharer, expected, children }: { sharer: string; expected?: number; children: ReactNode }) {
+  const state = useSubscribeState(sharer, expected);
   return <Ctx.Provider value={state}>{children}</Ctx.Provider>;
 }
 
@@ -80,6 +85,15 @@ export function SealedSubscribe({ withAmount = false }: { withAmount?: boolean }
   // A sharer cannot subscribe to themselves, so they do not see the button on their own post.
   if (sub.accountId === sub.sharer) return null;
   const { accountId, signIn, subscribed, sending, subscribe, msg } = sub;
+  if (sub.mismatch) {
+    return (
+      <div className="sealed-sub">
+        <p className="ai-msg" role="alert">
+          This post asks for {sub.expected} NEAR a month, but the sharer&apos;s current price is {formatNear(sub.price)} NEAR. You can subscribe once the sharer updates it to match.
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="sealed-sub">
       {withAmount && (

@@ -482,3 +482,15 @@ html:root body :is(header, .card, .post) .icon-btn:hover:not(:disabled) { border
 .inactive-cards summary::-webkit-details-marker { display: none; }
 .inactive-cards summary::after { content: " ▾"; }
 .inactive-cards[open] summary::after { content: " ▴"; }
+/* Sealed (locked) strategy look: redacted bars instead of a padlock */
+.sealed { position: relative; display: grid; gap: 10px; margin-top: 10px; padding: 14px; border-radius: 12px; background: rgba(255,255,255,.04); border: 1px dashed rgba(106,162,255,.4); overflow: hidden; }
+.sealed-bars { display: grid; gap: 7px; }
+.sealed-bars i { display: block; height: 9px; border-radius: 6px; background: linear-gradient(90deg, rgba(47,214,232,.35), rgba(59,120,255,.35), rgba(217,47,84,.35)); filter: blur(1.5px); }
+.sealed-bars i:nth-child(1) { width: 92%; } .sealed-bars i:nth-child(2) { width: 68%; } .sealed-bars i:nth-child(3) { width: 80%; }
+.sealed::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(110deg, transparent 35%, rgba(255,255,255,.1) 50%, transparent 65%); transform: translateX(-100%); animation: sealed-shine 3.6s ease-in-out infinite; }
+@keyframes sealed-shine { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .sealed::after { animation: none; } }
+.sealed-label { font-size: 13px; color: var(--muted); }
+.sealed-label b { color: #7fb0ff; font-weight: 600; }
+.unlock-card { position: relative; border: 1px solid transparent !important; background-image: linear-gradient(rgba(14,18,30,.92), rgba(14,18,30,.92)), linear-gradient(135deg, #2fd6e8, #3b78ff, #d92f54) !important; background-origin: border-box; background-clip: padding-box, border-box; }
+.unlock-kicker { display: inline-block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; font-weight: 700; background: linear-gradient(90deg, #2fd6e8, #3b78ff, #d92f54); -webkit-background-clip: text; background-clip: text; color: transparent; }

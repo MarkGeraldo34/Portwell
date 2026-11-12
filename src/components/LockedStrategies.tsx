@@ -77,6 +77,7 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
               <span>{t.capitalNeededNear} NEAR to start</span>
             </p>
             <p style={{ margin: "0 0 10px", fontSize: "14.5px" }}>{t.summary}</p>
+            <SealedSubscribe withAmount />
             {media[t.id]}
             {d ? (
               <>
@@ -96,7 +97,6 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
               <div className="sealed" aria-label={`${t.steps} steps, risk notes and proof wallet are sealed until you subscribe`}>
                 <span className="sealed-bars" aria-hidden="true"><i /><i /><i /></span>
                 <span className="sealed-label">{t.steps} steps · risk notes · proof wallet <b>sealed until you subscribe</b></span>
-                <SealedSubscribe />
               </div>
             )}
           </article>

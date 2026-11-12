@@ -97,8 +97,8 @@ export function SubscriptionActions() {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState("");
   const [owner, setOwner] = useState<string | null>(null);
-  const [lookupId, setLookupId] = useState("0");
-  const [looked, setLooked] = useState<SubscriptionView | null | undefined>(undefined);
+  const [query, setQuery] = useState("");
+  const [byId, setById] = useState<SubscriptionView | null>(null); // a subscription found by id that is not in your list
 
   const refresh = useCallback(async () => {
     if (!accountId) return;
@@ -118,6 +118,17 @@ export function SubscriptionActions() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const q = query.trim().toLowerCase();
+  useEffect(() => {
+    setById(null);
+    if (!/^\d{1,9}$/.test(q)) return;
+    let live = true;
+    void getSubscription(Number(q)).then((r) => live && setById(r)).catch(() => undefined);
+    return () => {
+      live = false;
+    };
+  }, [q]);
 
   async function act(a: Act, id: string) {
     setMsg("Waiting for wallet approval…");
@@ -142,11 +153,28 @@ export function SubscriptionActions() {
     );
   }
 
+  const matches = (x: SubscriptionView) => !q || x.id === q || x.sharer.toLowerCase().includes(q) || x.learner.toLowerCase().includes(q);
+  const found = (subs ?? []).filter(matches);
+  if (byId && !found.some((x) => x.id === byId.id)) found.unshift(byId);
+  const active = found.filter((x) => x.status === "Active");
+  const inactive = found.filter((x) => x.status !== "Active");
+  const isOwner = owner === accountId;
+  const card = (x: SubscriptionView) => <Row key={x.id} sub={x} me={accountId} isOwner={isOwner} onAct={(a, id) => void act(a, id)} />;
+
   return (
     <>
+      <div className="sub-search">
+        <input
+          type="search"
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Search by sharer name or subscription ID"
+          aria-label="Search subscriptions by sharer name or subscription ID"
+        />
+      </div>
       <section>
         <div className="row">
-          <h3 style={{ margin: 0 }}>{owner === accountId ? "All subscriptions (you are the owner)" : `Subscriptions for ${accountId}`}</h3>
+          <h3 style={{ margin: 0 }}>{isOwner ? "All subscriptions (you are the owner)" : `Subscriptions for ${accountId}`}</h3>
           <button className={`icon-btn${loading ? " spin" : ""}`} disabled={loading} onClick={() => void refresh()} aria-label="Refresh" title="Refresh">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
               <path d="M21 12a9 9 0 1 1-2.64-6.36" />
@@ -154,26 +182,17 @@ export function SubscriptionActions() {
             </svg>
           </button>
         </div>
-        {subs && subs.length === 0 && <p className="muted">None found for this account yet. A new subscription can take a few seconds to appear, so press the refresh icon.</p>}
-        {subs?.map((s) => (
-          <Row key={s.id} sub={s} me={accountId} isOwner={owner === accountId} onAct={(a, id) => void act(a, id)} />
-        ))}
-      </section>
-
-      <section className="card">
-        <h3>Look up any subscription by id</h3>
-        <label>
-          Subscription id
-          <input value={lookupId} onChange={(e) => setLookupId(e.target.value)} inputMode="numeric" />
-        </label>
-        <button
-          className="btn ghost"
-          onClick={() => void getSubscription(Number(lookupId)).then(setLooked).catch(() => setLooked(null))}
-        >
-          Look up
-        </button>
-        {looked === null && <p>No subscription with that id.</p>}
-        {looked && <Row sub={looked} me={accountId} isOwner={owner === accountId} onAct={(a, id) => void act(a, id)} />}
+        {subs && subs.length === 0 && !q && <p className="muted">None found for this account yet. A new subscription can take a few seconds to appear, so press the refresh icon.</p>}
+        {q && found.length === 0 && <p className="muted">No subscription matches “{query.trim()}”.</p>}
+        {active.map(card)}
+        {!q && subs && subs.length > 0 && active.length === 0 && <p className="muted">No active subscriptions.</p>}
+        {inactive.length > 0 && (
+          <details className="inactive-cards" open={!!q || (isOwner && inactive.some((x) => x.status === "Disputed"))}>
+            <summary>Inactive cards ({inactive.length})</summary>
+            <p className="muted" style={{ fontSize: 13, margin: "6px 0 0" }}>Resolved, disputed, cancelled (refunded) and fully paid subscriptions.</p>
+            {inactive.map(card)}
+          </details>
+        )}
       </section>
       {msg && <p role="status">{msg}</p>}
     </>

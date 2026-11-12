@@ -11,6 +11,7 @@ import { scanPost } from "@/lib/risk";
 import { requireAiApproval } from "@/lib/ai-gate";
 import { mailLink } from "@/lib/mail-link";
 import { AccountLink } from "./AccountLink";
+import { formatDuration } from "@/lib/duration";
 
 interface Card {
   req: RequestPost;
@@ -31,7 +32,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
   const { accountId, signIn, callTo } = useWallet();
   const [cards, setCards] = useState<Card[] | null>(null);
   const [loadErr, setLoadErr] = useState("");
-  const [form, setForm] = useState({ title: "", details: "", budget: "1" });
+  const [form, setForm] = useState({ title: "", details: "", budget: "1", durationN: "1", durationUnit: "months" });
   const [msg, setMsgText] = useState("");
   const [bad, setBad] = useState(false); // red text for AI-check and safety messages
   const setMsg = (text: string, isBad = false) => {
@@ -84,7 +85,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
       if (blocked) return setMsg(blocked, true);
       setMsg("Review passed. Waiting for wallet approval. A small storage deposit is attached and unused NEAR is refunded.");
       await callTo(SOCIAL_CONTRACT, "set", buildRequestSet(accountId, String(v.value.ts), v.value), STORAGE_DEPOSIT);
-      setForm({ title: "", details: "", budget: "1" });
+      setForm({ title: "", details: "", budget: "1", durationN: "1", durationUnit: "months" });
       setMsg("Request posted. It can take a few seconds to appear.");
       setTimeout(() => void load(), 3000);
     } catch (e) {
@@ -143,6 +144,16 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
           Budget for a month (NEAR)
           <input inputMode="decimal" value={form.budget} onChange={(e) => setForm({ ...form, budget: e.target.value })} />
         </label>
+        <label className="field">
+          How long are you willing to pay a sharer? (required)
+          <span className="duration-row">
+            <input inputMode="numeric" value={form.durationN} maxLength={3} onChange={(e) => setForm({ ...form, durationN: e.target.value })} aria-label="Duration" />
+            <select value={form.durationUnit} onChange={(e) => setForm({ ...form, durationUnit: e.target.value })} aria-label="Days or months">
+              <option value="days">days</option>
+              <option value="months">months</option>
+            </select>
+          </span>
+        </label>
         <button className="btn" disabled={busy} onClick={() => void post()}>
           {accountId ? "Post request" : "Connect wallet to post"}
         </button>
@@ -172,6 +183,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
               <div className="budget">
                 <b>{c.req.budget}</b>
                 <span>NEAR budget</span>
+                {c.req.duration && <span className="duration-chip">for {formatDuration(c.req.duration)}</span>}
               </div>
             </div>
             {c.req.details && <p className="req-details">{c.req.details}</p>}

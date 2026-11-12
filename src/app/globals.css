@@ -462,3 +462,15 @@ html:root body :is(header, .card, .post) .icon-btn:hover:not(:disabled) { border
 /* Offer email + contact-first prompt */
 .offers li .contact-btn { margin-left: 2px; }
 .offer-prompt { margin: 10px 0 0; padding: 9px 12px; border-radius: 10px; font-size: 13px; line-height: 1.45; color: #ff4d4d; background: rgba(255,77,77,.1); border: 1px solid rgba(255,77,77,.4); }
+/* My subscriptions: active ones stand out, refund/dispute tucked into a greyed dropdown */
+.subs .sub-card.is-active { border-color: rgba(59,120,255,.6); box-shadow: 0 0 0 1px rgba(59,120,255,.35), 0 0 22px rgba(59,120,255,.22); }
+.subs .sub-card.is-active .sub-head strong { color: #fff; }
+.subs .sub-card.is-settled { opacity: .6; }
+.more-actions { display: inline-block; position: relative; }
+.more-actions summary { list-style: none; cursor: pointer; padding: 8px 14px; border-radius: 999px; font-size: 13px; color: #8a90a0; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12); user-select: none; }
+.more-actions summary::-webkit-details-marker { display: none; }
+.more-actions summary::after { content: " ▾"; }
+.more-actions[open] summary::after { content: " ▴"; }
+.more-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.subs .btn.muted-act { color: #8a90a0; border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.03); }
+.subs .btn.muted-act:hover { color: #c8ccd8; }

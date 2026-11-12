@@ -187,8 +187,7 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
     <section className="card">
       <h3>Share a strategy post</h3>
       <p className="muted">
-        Every post goes through a required AI scam review before it is published. Your X handle and email are shown
-        publicly on the feed, and your Ethos score is looked up from your X handle.
+        Post the strategy you are looking to share with others while you get paid
       </p>
       {text("title", "Title", { max: POST_LIMITS.title })}
       {text("summary", "Summary (shown to everyone)", { multi: true, max: POST_LIMITS.summary })}

@@ -474,3 +474,11 @@ html:root body :is(header, .card, .post) .icon-btn:hover:not(:disabled) { border
 .more-menu { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 .subs .btn.muted-act { color: #8a90a0; border-color: rgba(255,255,255,.1); background: rgba(255,255,255,.03); }
 .subs .btn.muted-act:hover { color: #c8ccd8; }
+/* My subscriptions: search + inactive dropdown */
+.sub-search { margin: 4px 0 16px; }
+.subs .sub-search input { max-width: 560px; border-radius: 999px; padding: 11px 16px; }
+.inactive-cards { margin-top: 16px; }
+.inactive-cards summary { list-style: none; cursor: pointer; display: inline-block; padding: 9px 16px; border-radius: 999px; font-size: 14px; color: #8a90a0; background: rgba(255,255,255,.04); border: 1px solid rgba(255,255,255,.12); user-select: none; }
+.inactive-cards summary::-webkit-details-marker { display: none; }
+.inactive-cards summary::after { content: " ▾"; }
+.inactive-cards[open] summary::after { content: " ▴"; }

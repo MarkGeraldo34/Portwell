@@ -534,3 +534,6 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 }
 @media (prefers-reduced-motion: reduce) { html:root body :is(.card, .post):hover { transform: none; } }
 .sealed-sub { position: relative; z-index: 1; margin-top: 4px; }
+.pay-line { margin: 0 0 8px; font-size: 14px; color: var(--muted); }
+.pay-line b { color: #7fb0ff; }
+.post > .sealed-sub { margin: 4px 0 12px; }

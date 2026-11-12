@@ -131,7 +131,7 @@ function Post({ post, n }: { post: FeedPost; n?: Numbers }) {
 
       <div className="post-foot">
         {!!post.mediaCount && <span className="muted media-count">{post.mediaCount} media</span>}
-        <Link className="post-cta" href={`/sharers/${post.sharer}`}>
+        <Link className="post-cta" href={`/sharers/${post.sharer}?post=${encodeURIComponent(post.id)}`}>
           View post →
         </Link>
       </div>

@@ -9,6 +9,8 @@ const good: PostInput = {
   risks: "Unstaking takes days and the price can fall.",
   risk: "low",
   capitalNeededNear: "5",
+  durationN: "2",
+  durationUnit: "months",
   xHandle: "@Portwell_App",
   email: "Sam@Example.com",
   media: [{ url: "https://example.com/pic.PNG" }, { url: "https://example.com/pic.PNG" }, { url: "https://youtu.be/abc" }],

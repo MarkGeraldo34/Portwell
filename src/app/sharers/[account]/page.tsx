@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { AccountLink } from "@/components/AccountLink";
 import { SubscribePanel, SubscribeProvider } from "@/components/SubscribePanel";
 import { LockedStrategies } from "@/components/LockedStrategies";
 import { MediaGallery } from "@/components/MediaGallery";
@@ -43,7 +44,7 @@ export default async function SharerPage({ params, searchParams }: { params: Pro
 
   return (
     <SubscribeProvider sharer={sharer} expected={onlyPost && shown.length === 1 ? shown[0].capitalNeededNear : undefined}>
-      <h1>{sharer}</h1>
+      <h1><AccountLink account={sharer} full /></h1>
       <SharerLinks handle={latest?.xHandle} email={latest?.email} ethos={ethos} />
       <SubscribePanel />
       {shown.length < pool.length && <p className="banner">{pool.length - shown.length} post(s) hidden by the scam check.</p>}

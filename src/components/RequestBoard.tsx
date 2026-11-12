@@ -192,10 +192,8 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
                     {o.note && <span className="offer-note">“{o.note}”</span>}
                     {addr && (
                       <a className="contact-btn" href={mailLink(addr).href} target={mailLink(addr).webmail ? "_blank" : undefined} rel="noopener noreferrer nofollow" title={`Email ${addr}`} aria-label={`Email @${o.sharer}`}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                          <rect x="3" y="5" width="18" height="14" rx="2" />
-                          <path d="M3 7l9 6 9-6" />
-                        </svg>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/gmail-logo.png" alt="" width={18} height={18} />
                       </a>
                     )}
                     {mine && <Link className="offer-link" href={`/sharers/${o.sharer}`}>View &amp; subscribe →</Link>}

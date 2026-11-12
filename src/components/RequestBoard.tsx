@@ -9,6 +9,7 @@ import { SOCIAL_CONTRACT, STORAGE_DEPOSIT, loadBoard } from "@/lib/social";
 import { LIMITS, buildOfferSet, buildRequestSet, validateOffer, validateRequest, type OfferPost, type RequestPost } from "@/lib/social-format";
 import { scanPost } from "@/lib/risk";
 import { requireAiApproval } from "@/lib/ai-gate";
+import { mailLink } from "@/lib/mail-link";
 
 interface Card {
   req: RequestPost;
@@ -186,7 +187,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
                     </span>
                     {o.note && <span className="offer-note">“{o.note}”</span>}
                     {emails[o.sharer] && (
-                      <a className="contact-btn" href={`mailto:${emails[o.sharer]}`} rel="nofollow" title={`Email ${emails[o.sharer]}`} aria-label={`Email @${o.sharer}`}>
+                      <a className="contact-btn" href={mailLink(emails[o.sharer]).href} target={mailLink(emails[o.sharer]).webmail ? "_blank" : undefined} rel="noopener noreferrer nofollow" title={`Email ${emails[o.sharer]}`} aria-label={`Email @${o.sharer}`}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <rect x="3" y="5" width="18" height="14" rx="2" />
                           <path d="M3 7l9 6 9-6" />

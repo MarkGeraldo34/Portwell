@@ -63,7 +63,7 @@ const ITEMS: { href: string; label: string; icon: ReactNode; badge?: BadgeKey; m
   },
   {
     href: "/requests",
-    label: "Requests",
+    label: "All Requests",
     badge: "requests",
     match: (p) => p === "/requests" || p.startsWith("/requests/"),
     icon: svg(
@@ -71,6 +71,17 @@ const ITEMS: { href: string; label: string; icon: ReactNode; badge?: BadgeKey; m
         <circle cx="12" cy="12" r="10" />
         <path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3" />
         <path d="M12 17h.01" />
+      </>,
+    ),
+  },
+  {
+    href: "/my-requests",
+    label: "My Requests",
+    match: (p) => p.startsWith("/my-requests"),
+    icon: svg(
+      <>
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+        <circle cx="12" cy="7" r="4" />
       </>,
     ),
   },

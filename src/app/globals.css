@@ -252,7 +252,7 @@ header nav { margin-left: auto; }
   body { padding-bottom: 74px; }
   .sidenav { position: fixed; z-index: 50; left: 8px; right: 8px; bottom: 8px; top: auto; width: auto; margin: 0; padding: 6px; flex-direction: row; justify-content: space-around; gap: 2px; border-radius: 18px; }
   .side-item { flex: 1; min-width: 0; flex-direction: column; gap: 3px; padding: 8px 4px; font-size: 11px; text-align: center; }
-  .side-item span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+  .side-item .side-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
 }
 
 /* ---- Leaderboard ---- */

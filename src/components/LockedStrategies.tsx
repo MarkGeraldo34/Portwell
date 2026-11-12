@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { Buffer } from "buffer";
 import { useWallet } from "./WalletProvider";
 import { VerdictTag } from "./RiskPanel";
+import { SealedSubscribe } from "./SubscribePanel";
 import type { Verdict } from "@/lib/risk";
 import { APP, RECIPIENT } from "@/lib/unlock";
 
@@ -95,6 +96,7 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
               <div className="sealed" aria-label={`${t.steps} steps, risk notes and proof wallet are sealed until you subscribe`}>
                 <span className="sealed-bars" aria-hidden="true"><i /><i /><i /></span>
                 <span className="sealed-label">{t.steps} steps · risk notes · proof wallet <b>sealed until you subscribe</b></span>
+                <SealedSubscribe />
               </div>
             )}
           </article>

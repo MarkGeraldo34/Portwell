@@ -4,6 +4,8 @@
 //   <sharer>/portwell/offer/<learner>_<id>       -> JSON text of an offer to teach that request
 // Anyone can read every account's tree with a wildcard, e.g. "*/portwell/request/*".
 
+import { validateEmail } from "./post-format.ts";
+
 export const APP = "portwell";
 export const REQUEST_KEYS = [`*/${APP}/request/*`];
 export const OFFER_KEYS = [`*/${APP}/offer/*`];
@@ -21,6 +23,7 @@ export interface RequestValue {
 export interface OfferValue {
   v: 1;
   n: string; // optional note
+  e: string; // sharer's contact email (required)
   ts: number;
 }
 export interface RequestPost {
@@ -34,6 +37,7 @@ export interface RequestPost {
 export interface OfferPost {
   sharer: string;
   note: string;
+  email: string; // "" on older offers made before email was required
   ts: number;
 }
 
@@ -55,10 +59,12 @@ export function validateRequest(input: { title: string; details: string; budget:
   return { ok: true, value: { v: 1, t, d, b: String(budget), ts: now } };
 }
 
-export function validateOffer(note: string, now = Date.now()): Valid<OfferValue> {
+export function validateOffer(note: string, email: string, now = Date.now()): Valid<OfferValue> {
   const n = clean(note);
   if (n.length > LIMITS.note) return { ok: false, error: `Keep the note under ${LIMITS.note} characters.` };
-  return { ok: true, value: { v: 1, n, ts: now } };
+  const e = validateEmail(email);
+  if (!e.ok) return e;
+  return { ok: true, value: { v: 1, n, e: e.value, ts: now } };
 }
 
 const WRITE_OPTIONS = { refund_unused_deposit: true };
@@ -112,7 +118,7 @@ export function parseOffers(tree: unknown, learner: string, requestId: string): 
   const out: OfferPost[] = [];
   for (const { account, id, value } of leaves(tree, "offer")) {
     if (id !== want) continue;
-    out.push({ sharer: account, note: str(value.n, LIMITS.note), ts: typeof value.ts === "number" ? value.ts : 0 });
+    out.push({ sharer: account, note: str(value.n, LIMITS.note), email: str(value.e, 120), ts: typeof value.ts === "number" ? value.ts : 0 });
   }
   return out.sort((a, b) => a.ts - b.ts);
 }

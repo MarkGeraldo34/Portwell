@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { AccountLink } from "./AccountLink";
 import { useWallet } from "./WalletProvider";
 import { ReleaseTimeline, maturedWeeks } from "./ReleaseTimeline";
 import { formatNear, getOwner, getSubscription, listSubscriptionsFor, type SubscriptionView } from "@/lib/contract";
@@ -47,9 +48,9 @@ function Row({
         <span className={`tag status-${sub.status.toLowerCase()}`}>{sub.status}</span>
       </div>
       <p className="sub-parties">
-        <span title={sub.learner}>{sub.learner}</span>
+        <AccountLink account={sub.learner} full />
         <span className="arrow" aria-hidden="true">→</span>
-        <span title={sub.sharer}>{sub.sharer}</span>
+        <AccountLink account={sub.sharer} full />
       </p>
       <p className="sub-progress">{progress(sub)}</p>
       <ReleaseTimeline sub={sub} />

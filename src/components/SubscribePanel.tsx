@@ -59,7 +59,7 @@ function useSubscribeState(sharer: string) {
       setSending(false);
     }
   }
-  return { accountId, signIn, price, stats, msg, loadError, subscribed, sending, subscribe };
+  return { sharer, accountId, signIn, price, stats, msg, loadError, subscribed, sending, subscribe };
 }
 
 type SubState = ReturnType<typeof useSubscribeState>;
@@ -77,6 +77,8 @@ export const useSubscribe = () => useContext(Ctx);
 export function SealedSubscribe({ withAmount = false }: { withAmount?: boolean }) {
   const sub = useSubscribe();
   if (!sub || !sub.price) return null;
+  // A sharer cannot subscribe to themselves, so they do not see the button on their own post.
+  if (sub.accountId === sub.sharer) return null;
   const { accountId, signIn, subscribed, sending, subscribe, msg } = sub;
   return (
     <div className="sealed-sub">

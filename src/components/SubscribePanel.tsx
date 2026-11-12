@@ -43,7 +43,14 @@ function useSubscribeState(sharer: string) {
     setSending(true);
     setMsg("Waiting for wallet approval…");
     try {
-      await call("subscribe", { sharer }, BigInt(price));
+      // Re-read the price right before paying: the deposit must equal the sharer's current price exactly.
+      const current = await getPrice(sharer);
+      if (!current) throw new Error("This sharer has no price set anymore.");
+      if (current !== price) {
+        setPrice(current);
+        throw new Error(`The sharer changed their price to ${formatNear(current)} NEAR. Review it and press Subscribe again.`);
+      }
+      await call("subscribe", { sharer }, BigInt(current));
       setSubscribed(true);
       setMsg("Sent. Funds are held in escrow and released weekly. Open My subscriptions (the card icon at the top) and press the refresh icon to see it.");
     } catch (e) {

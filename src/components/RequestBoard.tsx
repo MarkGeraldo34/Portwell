@@ -40,6 +40,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
   const [busy, setBusy] = useState(false);
   const [offering, setOffering] = useState<string | null>(null); // "learner/blockHeight" being answered
   const [note, setNote] = useState("");
+  const [offerEmail, setOfferEmail] = useState("");
 
   const load = useCallback(async () => {
     setLoadErr("");
@@ -94,7 +95,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
 
   async function offer(c: Card) {
     if (!accountId) return signIn();
-    const v = validateOffer(note);
+    const v = validateOffer(note, offerEmail);
     if (!v.ok) return setMsg(v.error);
     setBusy(true);
     setMsg("Checking that you have a monthly price set…");
@@ -112,6 +113,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
       await callTo(SOCIAL_CONTRACT, "set", buildOfferSet(accountId, c.req.learner, c.req.id, v.value), STORAGE_DEPOSIT);
       setOffering(null);
       setNote("");
+      setOfferEmail("");
       setMsg("Offer sent. It can take a few seconds to appear.");
       setTimeout(() => void load(), 3000);
     } catch (e) {
@@ -179,15 +181,17 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
 
             {c.offers.length > 0 && (
               <ul className="offers">
-                {c.offers.map((o) => (
+                {c.offers.map((o) => {
+                  const addr = o.email || emails[o.sharer];
+                  return (
                   <li key={o.sharer}>
                     <span className="offer-who" title={o.sharer}>@{short(o.sharer)}</span>
                     <span className={`chip${o.price !== null && o.price <= c.req.budget ? "" : " warn"}`}>
                       {o.price} NEAR / 30 days {o.price !== null && o.price <= c.req.budget ? "· in budget" : "· above budget"}
                     </span>
                     {o.note && <span className="offer-note">“{o.note}”</span>}
-                    {emails[o.sharer] && (
-                      <a className="contact-btn" href={mailLink(emails[o.sharer]).href} target={mailLink(emails[o.sharer]).webmail ? "_blank" : undefined} rel="noopener noreferrer nofollow" title={`Email ${emails[o.sharer]}`} aria-label={`Email @${o.sharer}`}>
+                    {addr && (
+                      <a className="contact-btn" href={mailLink(addr).href} target={mailLink(addr).webmail ? "_blank" : undefined} rel="noopener noreferrer nofollow" title={`Email ${addr}`} aria-label={`Email @${o.sharer}`}>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                           <rect x="3" y="5" width="18" height="14" rx="2" />
                           <path d="M3 7l9 6 9-6" />
@@ -196,7 +200,8 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
                     )}
                     {mine && <Link className="offer-link" href={`/sharers/${o.sharer}`}>View &amp; subscribe →</Link>}
                   </li>
-                ))}
+                  );
+                })}
               </ul>
             )}
             {mine && c.offers.length > 0 && (
@@ -213,6 +218,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
                 <span className="muted" style={{ fontSize: 13 }}>Your request</span>
               ) : offering === id ? (
                 <div className="offer-box">
+                  <input type="email" required value={offerEmail} maxLength={120} placeholder="Your email (required, the learner will write to you)" autoComplete="email" onChange={(e) => setOfferEmail(e.target.value)} />
                   <input value={note} maxLength={LIMITS.note} placeholder="Short note (optional)" onChange={(e) => setNote(e.target.value)} />
                   <button className="btn" disabled={busy} onClick={() => void offer(c)}>Send offer</button>
                   <button className="btn ghost" onClick={() => setOffering(null)}>Cancel</button>

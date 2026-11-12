@@ -52,7 +52,7 @@ function useSubscribeState(sharer: string) {
       }
       await call("subscribe", { sharer }, BigInt(current));
       setSubscribed(true);
-      setMsg("Sent. Funds are held in escrow and released weekly. Open My subscriptions (the card icon at the top) and press the refresh icon to see it.");
+      setMsg("Sent. Funds are held in escrow and released weekly. The sharer has 24 hours to start posting; if they do not start sharing after 24 hours, click Refund on your subscription. Open My subscriptions (the card icon at the top) and press the refresh icon to see it.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Transaction failed");
     } finally {

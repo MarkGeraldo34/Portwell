@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useWallet } from "./WalletProvider";
 
 export function ConnectButton() {
@@ -14,7 +15,7 @@ export function ConnectButton() {
   }
   return (
     <span className="row">
-      <code>{accountId}</code>
+      <Link href={`/u/${encodeURIComponent(accountId)}`} className="acct-link" title="Your profile"><code>{accountId}</code></Link>
       <button className="btn ghost" onClick={() => void signOut()}>
         Sign out
       </button>

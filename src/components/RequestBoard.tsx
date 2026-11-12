@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
-import { formatNear, getPrice } from "@/lib/contract";
+import { formatNear, getPrice, parseNear } from "@/lib/contract";
 import { SOCIAL_CONTRACT, STORAGE_DEPOSIT, loadBoard } from "@/lib/social";
 import { LIMITS, buildOfferSet, buildRequestSet, validateOffer, validateRequest, type OfferPost, type RequestPost } from "@/lib/social-format";
 import { scanPost } from "@/lib/risk";
@@ -100,9 +100,17 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
     setBusy(true);
     setMsg("Checking that you have a monthly price set…");
     try {
-      if (CONTRACT_CONFIGURED && !(await getPrice(accountId).catch(() => null))) {
-        setMsg("Set your monthly price first (Share post in the left menu) so learners can pay you. Then offer again.");
-        return;
+      if (CONTRACT_CONFIGURED) {
+        const price = await getPrice(accountId).catch(() => null);
+        if (!price) {
+          setMsg("Set your monthly price first (Share post in the left menu) so learners can pay you. Then offer again.");
+          return;
+        }
+        // The learner subscribes at the sharer's contract price, so the offer only stands if that price is exactly the learner's budget.
+        if (BigInt(price) !== parseNear(String(c.req.budget))) {
+          setMsg(`This learner will pay ${c.req.budget} NEAR for a month, but your monthly price is ${formatNear(price, 4)} NEAR. Set your price to ${c.req.budget} NEAR (Share post in the left menu) to accept their amount, then offer again.`, true);
+          return;
+        }
       }
       if (v.value.n) {
         setMsg("Running the AI scam review…");
@@ -186,8 +194,8 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
                   return (
                   <li key={o.sharer}>
                     <span className="offer-who" title={o.sharer}>@{short(o.sharer)}</span>
-                    <span className={`chip${o.price !== null && o.price <= c.req.budget ? "" : " warn"}`}>
-                      {o.price} NEAR / 30 days {o.price !== null && o.price <= c.req.budget ? "· in budget" : "· above budget"}
+                    <span className={`chip${o.price === c.req.budget ? "" : " warn"}`}>
+                      {o.price} NEAR / 30 days {o.price === c.req.budget ? "· matches your budget" : "· not at the requested amount"}
                     </span>
                     {o.note && <span className="offer-note">“{o.note}”</span>}
                     {addr && (
@@ -196,7 +204,8 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list"; ema
                         <img src="/gmail-logo.png" alt="" width={18} height={18} />
                       </a>
                     )}
-                    {mine && <Link className="offer-link" href={`/sharers/${o.sharer}`}>View &amp; subscribe →</Link>}
+                    {mine && o.price === c.req.budget && <Link className="offer-link" href={`/sharers/${o.sharer}`}>View &amp; subscribe →</Link>}
+                    {mine && o.price !== c.req.budget && <span className="offer-note">This sharer's price differs from your {c.req.budget} NEAR budget, so you can't subscribe through this request.</span>}
                   </li>
                   );
                 })}

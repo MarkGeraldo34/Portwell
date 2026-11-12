@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AccountLink } from "./AccountLink";
 import { useEffect, useState } from "react";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { getStats, listSubscriptionsFor } from "@/lib/contract";
@@ -73,7 +74,7 @@ export function Leaderboard({ known }: { known: string[] }) {
           <li key={r.sharer} className={`post board-row${i < 3 ? " top" : ""}`}>
             <Crown rank={i + 1} />
             <div className="board-who">
-              <Link href={`/sharers/${r.sharer}`} title={r.sharer}>@{short(r.sharer)}</Link>
+              <AccountLink account={r.sharer} />
               <span className="muted">
                 {r.disputes} dispute{r.disputes === 1 ? "" : "s"} · {r.refunds} refund{r.refunds === 1 ? "" : "s"}
               </span>

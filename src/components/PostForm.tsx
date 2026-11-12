@@ -8,6 +8,8 @@ import { hashPost, normalizePost, POST_LIMITS, validateMedia, type PostInput } f
 import { proofMessage, RECIPIENT, type ProofKind } from "@/lib/proof-message";
 import { scanPost } from "@/lib/risk";
 import { requireAiApproval } from "@/lib/ai-gate";
+import { CONTRACT_CONFIGURED } from "@/lib/config";
+import { parseNear } from "@/lib/contract";
 
 interface Proof {
   accountId: string;
@@ -56,8 +58,9 @@ function videoSeconds(file: File): Promise<number> {
 }
 
 export function PostForm({ onPublished }: { onPublished: () => void }) {
-  const { accountId, signIn, signMessage } = useWallet();
-  const [f, setF] = useState({ title: "", summary: "", steps: "", risks: "", risk: "medium", capital: "0", xHandle: "", email: "" });
+  const { accountId, signIn, signMessage, call } = useWallet();
+  const [unpaid, setUnpaid] = useState<string | null>(null); // capital whose monthly price still needs saving
+  const [f, setF] = useState({ title: "", summary: "", steps: "", risks: "", risk: "medium", capital: "1", durationN: "1", durationUnit: "months", xHandle: "", email: "" });
   const [media, setMedia] = useState<MediaEntry[]>([]);
   const [link, setLink] = useState("");
   const [msg, setMsg] = useState("");
@@ -139,6 +142,8 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
       risks: f.risks,
       risk: f.risk,
       capitalNeededNear: f.capital,
+      durationN: f.durationN,
+      durationUnit: f.durationUnit,
       xHandle: f.xHandle,
       email: f.email,
       media: media.map((m) => ({ url: m.url, upload: m.upload })),
@@ -162,7 +167,19 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
       const json = (await res.json().catch(() => ({}))) as { error?: string };
       if (!res.ok) return say(json.error ?? "Could not publish. Try again.", res.status === 422 || res.status === 503);
       say("Published. Your post is now on the feed.");
-      setF({ title: "", summary: "", steps: "", risks: "", risk: "medium", capital: "0", xHandle: f.xHandle, email: f.email });
+      // The capital needed IS the monthly price: save it in the escrow contract so learners see and pay exactly this.
+      if (CONTRACT_CONFIGURED) {
+        say("Published. Approve saving your monthly price of " + norm.value.capitalNeededNear + " NEAR in your wallet…");
+        try {
+          await call("set_price", { price: parseNear(String(norm.value.capitalNeededNear)).toString() });
+          setUnpaid(null);
+          say(`Published. Learners will see and pay exactly ${norm.value.capitalNeededNear} NEAR per month.`);
+        } catch (e) {
+          setUnpaid(String(norm.value.capitalNeededNear));
+          say(`Published, but the monthly price was not saved (${e instanceof Error ? e.message : "wallet error"}). Use the button below to save it.`, true);
+        }
+      }
+      setF({ title: "", summary: "", steps: "", risks: "", risk: "medium", capital: "1", durationN: "1", durationUnit: "months", xHandle: f.xHandle, email: f.email });
       setMedia([]);
       onPublished();
     } catch (e) {
@@ -202,7 +219,19 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
             <option value="high">high</option>
           </select>
         </label>
-        {text("capital", "Capital needed (NEAR)", { max: 12 })}
+        {text("capital", "Capital needed (NEAR): the monthly amount learners see and pay (min 0.1)", { max: 12 })}
+      </div>
+      <div className="row two">
+        <label>
+          How long will you share this strategy? (required)
+          <span className="duration-row">
+            <input inputMode="numeric" value={f.durationN} maxLength={3} onChange={(e) => setF({ ...f, durationN: e.target.value })} aria-label="Duration" />
+            <select value={f.durationUnit} onChange={(e) => setF({ ...f, durationUnit: e.target.value })} aria-label="Days or months">
+              <option value="days">days</option>
+              <option value="months">months</option>
+            </select>
+          </span>
+        </label>
       </div>
       <div className="row two">
         {text("xHandle", "Your X handle (required)", { ph: "@yourhandle", max: 16 })}

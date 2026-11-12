@@ -24,6 +24,9 @@ function progress(sub: SubscriptionView): string {
   }
 }
 
+/** True once 24 hours have passed since the subscription started. */
+const pastDay = (sub: SubscriptionView) => Date.now() - Number(BigInt(sub.start_ns) / 1_000_000n) >= 24 * 3600 * 1000;
+
 function Row({
   sub,
   me,
@@ -50,6 +53,23 @@ function Row({
       </p>
       <p className="sub-progress">{progress(sub)}</p>
       <ReleaseTimeline sub={sub} />
+      {open && (isLearner || sub.sharer === me) && (
+        <p className="offer-prompt" role="note">
+          {isLearner ? (
+            <>
+              The sharer has 24 hours from your subscription to start posting. If they do not start sharing after 24 hours, click the Refund button
+              {pastDay(sub) ? " below." : " (under More actions)."}
+            </>
+          ) : (
+            <>You have 24 hours from this subscription to start sharing. If you do not start posting after 24 hours, the learner will click Refund and get their unreleased payment back.</>
+          )}
+          {isLearner && pastDay(sub) && (
+            <span style={{ display: "block", marginTop: 8 }}>
+              <button className="btn" onClick={() => onAct({ method: "cancel" }, sub.id)}>Refund</button>
+            </span>
+          )}
+        </p>
+      )}
       {open && (
         <span className="row">
           {sub.sharer === me && (

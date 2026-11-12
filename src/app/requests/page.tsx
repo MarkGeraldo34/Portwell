@@ -9,7 +9,7 @@ export default async function RequestsPage() {
   for (const c of await loadCards().catch(() => [])) if (c.email && !emails[c.sharer]) emails[c.sharer] = c.email;
   return (
     <>
-      <h1>Requests</h1>
+      <h1>All Requests</h1>
       <RequestBoard mode="list" emails={emails} />
     </>
   );

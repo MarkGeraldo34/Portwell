@@ -88,7 +88,7 @@ export function SealedSubscribe() {
 export function SubscribePanel() {
   const sub = useSubscribe();
   if (!sub) return null;
-  const { accountId, signIn, price, stats, msg, loadError, subscribed, sending, subscribe } = sub;
+  const { price, stats, msg, loadError } = sub;
 
   return (
     <section className="card">
@@ -107,16 +107,6 @@ export function SubscribePanel() {
           {stats.distinct_payers} distinct payers · {stats.renewals} renewals · {stats.disputes} disputes
         </p>
       )}
-      {price &&
-        (accountId ? (
-          <button className="btn" onClick={() => void subscribe()} disabled={subscribed || sending} style={subscribed || sending ? { opacity: 0.5, cursor: "not-allowed" } : undefined}>
-            {subscribed ? "Subscribed ✓" : sending ? "Subscribing…" : "Subscribe"}
-          </button>
-        ) : (
-          <button className="btn" onClick={signIn}>
-            Connect wallet to subscribe
-          </button>
-        ))}
       {msg && <p role="status">{msg}</p>}
     </section>
   );

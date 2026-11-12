@@ -549,3 +549,6 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .profile-stats { display: flex; gap: 18px; margin-top: 6px; color: var(--muted); font-size: 14px; }
 .profile-stats b { color: #fff; font-size: 16px; }
 .profile-req { margin-top: 10px; }
+.note-open { font-size: 13px; color: #7fb0ff; text-decoration: none; }
+.note-open:hover { text-decoration: underline; }
+.row > .acct-link code { background: transparent; }

@@ -35,6 +35,9 @@ export default async function SharerPage({ params }: { params: Promise<{ account
     verdict: "ok" as const,
   }));
 
+  const media: Record<string, React.ReactNode> = {};
+  for (const c of shown) if (c.media.length > 0) media[c.id] = <MediaGallery media={c.media} />;
+
   return (
     <>
       <h1>{sharer}</h1>
@@ -50,13 +53,7 @@ export default async function SharerPage({ params }: { params: Promise<{ account
         </section>
       ) : (
         <>
-          {shown.map((c) => c.media.length > 0 && (
-            <section key={c.id} className="media-block">
-              <h3 className="media-title">{c.title}</h3>
-              <MediaGallery media={c.media} />
-            </section>
-          ))}
-          <LockedStrategies sharer={sharer} teasers={teasers} />
+          <LockedStrategies sharer={sharer} teasers={teasers} media={media} />
         </>
       )}
     </>

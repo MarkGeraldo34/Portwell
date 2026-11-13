@@ -1,5 +1,5 @@
 import "server-only";
-import { list, put } from "@vercel/blob";
+import { del, list, put } from "@vercel/blob";
 import { cardFrom, parseCard, type PostCard, type PostValue } from "@/lib/post-format";
 import { keyFrom, open, seal } from "@/lib/secret-box";
 
@@ -78,6 +78,21 @@ export async function listCards(): Promise<PostCard[]> {
   );
   for (const c of cards) if (c) out.push(c);
   return out.sort((a, b) => b.ts - a.ts).slice(0, MAX_POSTS);
+}
+
+/** Deletes a post (card and encrypted content). Only the account that published it may. */
+export async function deletePost(id: string, sharer: string): Promise<"deleted" | "not_found" | "forbidden"> {
+  if (!/^[0-9]+-[a-z0-9]{1,8}$/.test(id)) return "not_found";
+  const cardPage = await list({ prefix: `posts/${id}.json`, limit: 1, token: blobToken() });
+  const cardBlob = cardPage.blobs[0];
+  if (!cardBlob) return "not_found";
+  const res = await fetch(cardBlob.url, { cache: "no-store" });
+  const card = res.ok ? parseCard(await res.json()) : null;
+  if (!card) return "not_found";
+  if (card.sharer !== sharer) return "forbidden";
+  const gated = await list({ prefix: `private/${id}.bin`, limit: 1, token: blobToken() });
+  await del([cardBlob.url, ...gated.blobs.map((b) => b.url)], { token: blobToken() });
+  return "deleted";
 }
 
 export async function readGated(id: string): Promise<GatedContent | null> {

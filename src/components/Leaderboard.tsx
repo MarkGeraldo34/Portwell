@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { AccountLink } from "./AccountLink";
+import { PaginationSummary, SearchBar, useListTools } from "./ListTools";
 import { useEffect, useState } from "react";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { getStats, listSubscriptionsFor } from "@/lib/contract";
@@ -48,6 +49,9 @@ export function Leaderboard({ known }: { known: string[] }) {
   }, [known]);
 
   const ranked = rows ? (tab === "subscribed" ? mostSubscribed(rows) : mostReputable(rows)) : [];
+  // Rank numbers come from the full ranking, so searching never renumbers a sharer.
+  const withRank = ranked.map((r, i) => ({ r, rank: i + 1 }));
+  const tools = useListTools(withRank, (x) => x.r.sharer, 10);
 
   return (
     <>
@@ -69,10 +73,12 @@ export function Leaderboard({ known }: { known: string[] }) {
       {err && <p className="muted">Could not load the leaderboard right now ({err}).</p>}
       {rows?.length === 0 && !err && <p className="muted">No sharers to rank yet.</p>}
 
+      {rows && rows.length > 0 && <SearchBar value={tools.query} onChange={tools.setQuery} placeholder="Search by sharer name" />}
+      {tools.searching && tools.filtered.length === 0 && <p className="muted">No sharer matches “{tools.query.trim()}”.</p>}
       <ol className="board">
-        {ranked.map((r, i) => (
-          <li key={r.sharer} className={`post board-row${i < 3 ? " top" : ""}`}>
-            <Crown rank={i + 1} />
+        {tools.paged.slice.map(({ r, rank }) => (
+          <li key={r.sharer} className={`post board-row${rank <= 3 ? " top" : ""}`}>
+            <Crown rank={rank} />
             <div className="board-who">
               <AccountLink account={r.sharer} />
               <span className="muted">
@@ -90,6 +96,7 @@ export function Leaderboard({ known }: { known: string[] }) {
           </li>
         ))}
       </ol>
+      {rows !== null && <PaginationSummary paged={tools.paged} noun={tools.paged.total === 1 ? "sharer" : "sharers"} onPage={tools.setPage} />}
     </>
   );
 }

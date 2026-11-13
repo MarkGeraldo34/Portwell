@@ -558,3 +558,13 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .duration-row select { flex: 1; }
 .duration-chip { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; color: #7fb0ff; background: rgba(59,120,255,.14); border: 1px solid rgba(59,120,255,.35); }
 .budget .duration-chip { margin-top: 6px; }
+/* Delete buttons (only the owner sees them) */
+.btn-delete { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 999px; color: #ff6b81; background: rgba(255,77,106,.08); border: 1px solid rgba(255,77,106,.4); transition: background .15s, box-shadow .15s; }
+.btn-delete:hover { background: rgba(255,77,106,.18); box-shadow: 0 0 14px rgba(255,77,106,.3); }
+.btn-delete.solid { color: #fff; background: linear-gradient(135deg, #d92f54, #ff4d6a); border-color: transparent; }
+.btn-delete.quiet { color: #aab0c0; background: transparent; border-color: rgba(255,255,255,.18); }
+.btn-delete:disabled { opacity: .55; cursor: not-allowed; }
+.delete-confirm { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; color: #ff9aa9; }
+.post-foot { flex-wrap: wrap; gap: 8px; }
+.req-actions { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.delete-locked { font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px; color: #8a90a0; background: rgba(255,255,255,.04); border: 1px dashed rgba(255,255,255,.2); }

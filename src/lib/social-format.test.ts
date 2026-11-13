@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { buildOfferSet, buildRequestSet, offerId, parseOffers, parseRequests, validateOffer, validateRequest } from "./social-format.ts";
+import { buildOfferSet, buildRequestDelete, buildRequestSet, offerId, parseOffers, parseRequests, validateOffer, validateRequest } from "./social-format.ts";
 
 test("valid request is trimmed and stamped", () => {
   const r = validateRequest({ title: "  Learn   staking ", details: "Beginner here", budget: "1.5", durationN: "2", durationUnit: "months" }, 123);
@@ -77,4 +77,10 @@ test("a request needs a duration in days or months", () => {
   assert.equal(validateRequest({ ...base, durationN: "", durationUnit: "days" }).ok, false);
   assert.equal(validateRequest({ ...base, durationN: "3", durationUnit: "years" }).ok, false);
   assert.equal(validateRequest({ ...base, durationN: "14", durationUnit: "days" }).ok, true);
+});
+
+test("deleting a request writes null under the signer's own account only", () => {
+  const d = buildRequestDelete("alice.testnet", "17");
+  assert.deepEqual(Object.keys(d.data), ["alice.testnet"]);
+  assert.equal((d.data["alice.testnet"] as { portwell: { request: Record<string, unknown> } }).portwell.request["17"], null);
 });

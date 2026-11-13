@@ -593,3 +593,4 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .pager-btn:disabled { opacity: .4; cursor: not-allowed; }
 .pager-gap { color: #8a90a0; padding: 0 2px; }
 @media (max-width: 900px) { .pager { margin-bottom: 84px; } }
+.profile-stats { flex-wrap: wrap; }

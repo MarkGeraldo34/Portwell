@@ -6,6 +6,7 @@ import { useWallet } from "./WalletProvider";
 import { VerdictTag } from "./RiskPanel";
 import { AccountLink } from "./AccountLink";
 import { ChatBox } from "./ChatBox";
+import { DeletePostButton } from "./DeleteButtons";
 import { UpdateCount, UpdateForm, UpdatesList, type UpdateItem } from "./Updates";
 import { formatDuration, type Duration } from "@/lib/duration";
 import { SealedSubscribe } from "./SubscribePanel";
@@ -93,6 +94,7 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
               )}
             </p>
             <p style={{ margin: "0 0 10px", fontSize: "14.5px" }}>{t.summary}</p>
+            <div className="post-foot"><DeletePostButton id={t.id} sharer={sharer} /></div>
             <SealedSubscribe withAmount />
             <p style={{ margin: "0 0 10px" }}><UpdateCount key={bump} sharer={sharer} /></p>
             <UpdateForm sharer={sharer} postId={t.id} onPosted={() => setBump((b) => b + 1)} />

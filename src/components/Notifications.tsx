@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Linkify } from "./AccountLink";
+import { PaginationSummary, SearchBar, useListTools } from "./ListTools";
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
@@ -81,7 +82,9 @@ export function Notifications() {
     );
   }
 
-  const shown = (notes ?? []).filter((n) => filter === "all" || n.kind === filter);
+  const byKind = (notes ?? []).filter((n) => filter === "all" || n.kind === filter);
+  const tools = useListTools(byKind, (n) => `${n.title} ${n.detail}`, 10);
+  const shown = tools.paged.slice;
 
   return (
     <>
@@ -99,9 +102,10 @@ export function Notifications() {
           </svg>
         </button>
       </div>
+      {notes && notes.length > 0 && <SearchBar value={tools.query} onChange={tools.setQuery} placeholder="Search by topic, item or sharer name" />}
       {err && <p className="ai-msg" role="alert">Could not load everything: {err}</p>}
       {notes === null && <p className="muted">Loading…</p>}
-      {notes && shown.length === 0 && !err && <p className="muted">Nothing here yet.</p>}
+      {notes && shown.length === 0 && !err && <p className="muted">{tools.searching ? `No notifications match “${tools.query.trim()}”.` : "Nothing here yet."}</p>}
       <ul className="notes">
         {shown.map((n) => {
           const body = (
@@ -124,6 +128,7 @@ export function Notifications() {
           );
         })}
       </ul>
+      {notes !== null && <PaginationSummary paged={tools.paged} noun={tools.paged.total === 1 ? "notification" : "notifications"} onPage={tools.setPage} />}
     </>
   );
 }

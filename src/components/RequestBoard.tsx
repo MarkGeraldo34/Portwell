@@ -13,6 +13,7 @@ import { mailLink } from "@/lib/mail-link";
 import { AccountLink } from "./AccountLink";
 import { PaginationSummary, SearchBar, useListTools } from "./ListTools";
 import { DeleteRequestButton } from "./DeleteButtons";
+import { VerifyX } from "./VerifyX";
 import { formatDuration } from "@/lib/duration";
 
 interface Card {
@@ -45,6 +46,8 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
   const [offering, setOffering] = useState<string | null>(null); // "learner/blockHeight" being answered
   const [note, setNote] = useState("");
   const [offerEmail, setOfferEmail] = useState("");
+  const [offerX, setOfferX] = useState<string | null>(null); // X handle proven by tweet challenge
+  const [xmap, setXmap] = useState<Record<string, string>>({}); // sharer account -> verified X handle
 
   const load = useCallback(async () => {
     setLoadErr("");
@@ -63,6 +66,13 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
         }),
       );
       setCards(withOffers);
+      const sharers = Array.from(new Set(withOffers.flatMap((c) => c.offers.map((o) => o.sharer)))).slice(0, 60);
+      if (sharers.length) {
+        fetch(`/api/x-verify?accounts=${encodeURIComponent(sharers.join(","))}`)
+          .then((r) => (r.ok ? r.json() : { verified: {} }))
+          .then((j: { verified?: Record<string, string> }) => setXmap(j.verified ?? {}))
+          .catch(() => {});
+      }
     } catch (e) {
       setLoadErr(e instanceof Error ? e.message : "Could not load requests");
       setCards([]);
@@ -99,6 +109,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
 
   async function offer(c: Card) {
     if (!accountId) return signIn();
+    if (!offerX) return setMsg("Verify your X handle first: get your code, post it from that X account and paste the tweet link.", true);
     const v = validateOffer(note, offerEmail);
     if (!v.ok) return setMsg(v.error);
     setBusy(true);
@@ -208,6 +219,17 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                     <span className={`chip${o.price === c.req.budget ? "" : " warn"}`}>
                       {o.price} NEAR / 30 days {o.price === c.req.budget ? "· matches your budget" : `· your budget is ${c.req.budget} NEAR`}
                     </span>
+                    {xmap[o.sharer] ? (
+                      <a className="contact-btn" href={`https://x.com/${encodeURIComponent(xmap[o.sharer])}`} target="_blank" rel="noopener noreferrer nofollow" title={`@${xmap[o.sharer]} on X, verified`} aria-label={`@${xmap[o.sharer]} on X, verified`}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src="/x-logo.png" alt="" width={18} height={18} />
+                        <span className="xv-tick" aria-hidden="true">✓</span>
+                      </a>
+                    ) : (
+                      <span className="contact-btn unverified" title="This sharer has not proven they own an X account. Be careful.">
+                        <span aria-hidden="true">⚠</span> Unverified X
+                      </span>
+                    )}
                     {o.note && <span className="offer-note">“{o.note}”</span>}
                     {addr && (
                       <a className="contact-btn" href={mailLink(addr).href} target={mailLink(addr).webmail ? "_blank" : undefined} rel="noopener noreferrer nofollow" title={`Email ${addr}`} aria-label={`Email @${o.sharer}`}>
@@ -238,6 +260,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                 </span>
               ) : offering === id ? (
                 <div className="offer-box">
+                  <VerifyX onChange={setOfferX} />
                   <input type="email" required value={offerEmail} maxLength={120} placeholder="Your email (required, the learner will write to you)" autoComplete="email" onChange={(e) => setOfferEmail(e.target.value)} />
                   <input value={note} maxLength={LIMITS.note} placeholder="Short note (optional)" onChange={(e) => setNote(e.target.value)} />
                   <button className="btn" disabled={busy} onClick={() => void offer(c)}>Offer to teach</button>

@@ -77,7 +77,7 @@ export async function GET(req: Request) {
     const mine = (await listCards()).filter((c) => c.sharer === sharer);
     // ?cards=1 returns the public card fields too (the same data the feed already shows). Steps and risks stay gated.
     if (new URL(req.url).searchParams.get("cards") === "1") {
-      return NextResponse.json({ posts: mine.map((c) => c.id), cards: mine.map((c) => ({ id: c.id, sharer: c.sharer, title: c.title, xHandle: c.xHandle, email: c.email, mediaCount: c.media.length })) });
+      return NextResponse.json({ posts: mine.map((c) => c.id), cards: mine.map((c) => ({ id: c.id, sharer: c.sharer, title: c.title, xHandle: c.xHandle, email: c.email, duration: c.duration, mediaCount: c.media.length })) });
     }
     return NextResponse.json({ posts: mine.map((c) => c.id) });
   } catch {

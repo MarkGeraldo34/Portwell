@@ -8,6 +8,7 @@ import { SharerLinks } from "@/components/SharerLinks";
 import { scanPost } from "@/lib/risk";
 import { cardsBySharer } from "@/server/posts";
 import { getEthos } from "@/server/ethos";
+import { xVerifiedFor } from "@/server/blob-store";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +28,9 @@ export default async function SharerPage({ params, searchParams }: { params: Pro
 
   // The newest post carries the sharer's contact details.
   const latest = shown.find((c) => c.xHandle) ?? shown[0];
-  const ethos = latest?.xHandle ? await getEthos(latest.xHandle) : undefined;
+  const provenHandle = (await xVerifiedFor([sharer]).catch(() => ({}) as Record<string, string>))[sharer];
+  const verified = !!latest?.xHandle && provenHandle?.toLowerCase() === latest.xHandle.toLowerCase();
+  const ethos = latest?.xHandle && verified ? await getEthos(latest.xHandle) : undefined;
 
   // Only teaser fields go to the browser. Steps and risks come from /api/unlock after a wallet signature.
   const teasers = shown.map((c) => ({
@@ -47,7 +50,7 @@ export default async function SharerPage({ params, searchParams }: { params: Pro
   return (
     <SubscribeProvider sharer={sharer} expected={onlyPost && shown.length === 1 ? shown[0].capitalNeededNear : undefined}>
       <h1><AccountLink account={sharer} full /></h1>
-      <SharerLinks handle={latest?.xHandle} email={latest?.email} ethos={ethos} />
+      <SharerLinks handle={latest?.xHandle} email={latest?.email} ethos={ethos} verified={verified} />
       <SubscribePanel />
       {shown.length < pool.length && <p className="banner">{pool.length - shown.length} post(s) hidden by the scam check.</p>}
       {shown.length === 0 ? (

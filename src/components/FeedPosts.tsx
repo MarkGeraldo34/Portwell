@@ -8,6 +8,7 @@ import { reputation } from "@/lib/reputation";
 import type { Ethos } from "@/lib/ethos-types";
 import { SharerLinks } from "./SharerLinks";
 import { AccountLink } from "./AccountLink";
+import { DeletePostButton } from "./DeleteButtons";
 import { formatDuration, type Duration } from "@/lib/duration";
 
 export interface FeedPost {
@@ -135,6 +136,7 @@ function Post({ post, n }: { post: FeedPost; n?: Numbers }) {
       <div className="post-foot">
         {post.duration && <span className="duration-chip">Shared for {formatDuration(post.duration)}</span>}
         {!!post.mediaCount && <span className="muted media-count">{post.mediaCount} media</span>}
+        <DeletePostButton id={post.id} sharer={post.sharer} />
         <Link className="post-cta" href={`/sharers/${post.sharer}?post=${encodeURIComponent(post.id)}`}>
           View post →
         </Link>

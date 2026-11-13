@@ -216,3 +216,62 @@ export async function readGated(id: string): Promise<GatedContent | null> {
     return null;
   }
 }
+
+export interface XVerified {
+  handle: string;
+  tweet: string;
+  ts: number;
+}
+
+const xPath = (account: string) => `xverified/${account}.json`;
+
+/** The X handle this NEAR account has proven it owns, or null. Public data: it is the same handle shown on the feed. */
+export async function getXVerified(account: string): Promise<XVerified | null> {
+  if (!/^[a-z0-9._-]{2,64}$/.test(account) || !blobConfigured()) return null;
+  try {
+    const page = await list({ prefix: xPath(account), limit: 1, token: blobToken() });
+    const blob = page.blobs.find((b) => b.pathname === xPath(account));
+    if (!blob) return null;
+    const res = await fetch(blob.url, { cache: "no-store" });
+    if (!res.ok) return null;
+    const j = (await res.json()) as Partial<XVerified>;
+    return typeof j.handle === "string" && /^[A-Za-z0-9_]{1,15}$/.test(j.handle) ? { handle: j.handle, tweet: String(j.tweet ?? ""), ts: Number(j.ts) || 0 } : null;
+  } catch {
+    return null;
+  }
+}
+
+/** account -> verified handle, for the accounts asked about. Unknown or unverified accounts are left out. */
+export async function xVerifiedFor(accounts: string[]): Promise<Record<string, string>> {
+  const uniq = Array.from(new Set(accounts)).slice(0, 60);
+  const found = await Promise.all(uniq.map(async (a) => [a, await getXVerified(a)] as const));
+  const out: Record<string, string> = {};
+  for (const [a, v] of found) if (v) out[a] = v.handle;
+  return out;
+}
+
+/** Which account (if any) has already verified this handle. Used so one X account cannot sit behind two wallets. */
+export async function xHandleOwner(handle: string): Promise<string | null> {
+  const want = handle.toLowerCase();
+  let cursor: string | undefined;
+  const blobs: { url: string; pathname: string }[] = [];
+  do {
+    const page = await list({ prefix: "xverified/", limit: 200, cursor, token: blobToken() });
+    blobs.push(...page.blobs);
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor && blobs.length < 1000);
+  for (const b of blobs) {
+    try {
+      const res = await fetch(b.url, { cache: "no-store" });
+      const j = res.ok ? ((await res.json()) as Partial<XVerified>) : null;
+      if (j && typeof j.handle === "string" && j.handle.toLowerCase() === want) return b.pathname.slice("xverified/".length).replace(/\.json$/, "");
+    } catch {
+      /* skip unreadable entries */
+    }
+  }
+  return null;
+}
+
+export async function saveXVerified(account: string, v: XVerified): Promise<void> {
+  await put(xPath(account), JSON.stringify(v), { access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 60, token: blobToken() });
+}

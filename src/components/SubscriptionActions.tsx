@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AccountLink } from "./AccountLink";
+import { PaginationSummary, SearchBar } from "./ListTools";
+import { paginate } from "@/lib/list-tools";
 import { UpdatesMeter } from "./Updates";
 import { useWallet } from "./WalletProvider";
 import { ReleaseTimeline, maturedWeeks } from "./ReleaseTimeline";
@@ -121,6 +123,7 @@ export function SubscriptionActions() {
   const [msg, setMsg] = useState("");
   const [owner, setOwner] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(1);
   const [byId, setById] = useState<SubscriptionView | null>(null); // a subscription found by id that is not in your list
 
   const refresh = useCallback(async () => {
@@ -181,20 +184,20 @@ export function SubscriptionActions() {
   if (byId && !found.some((x) => x.id === byId.id)) found.unshift(byId);
   const active = found.filter((x) => x.status === "Active");
   const inactive = found.filter((x) => x.status !== "Active");
+  const activePaged = paginate(active, page, 5);
   const isOwner = owner === accountId;
   const card = (x: SubscriptionView) => <Row key={x.id} sub={x} me={accountId} isOwner={isOwner} onAct={(a, id) => void act(a, id)} />;
 
   return (
     <>
-      <div className="sub-search">
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by sharer name or subscription ID"
-          aria-label="Search subscriptions by sharer name or subscription ID"
-        />
-      </div>
+      <SearchBar
+        value={query}
+        onChange={(v) => {
+          setQuery(v);
+          setPage(1);
+        }}
+        placeholder="Search by sharer name or subscription ID"
+      />
       <section>
         <div className="row">
           <h3 style={{ margin: 0 }}>{isOwner ? "All subscriptions (you are the owner)" : <>Subscriptions for <AccountLink account={accountId} full /></>}</h3>
@@ -207,7 +210,7 @@ export function SubscriptionActions() {
         </div>
         {subs && subs.length === 0 && !q && <p className="muted">None found for this account yet. A new subscription can take a few seconds to appear, so press the refresh icon.</p>}
         {q && found.length === 0 && <p className="muted">No subscription matches “{query.trim()}”.</p>}
-        {active.map(card)}
+        {activePaged.slice.map(card)}
         {!q && subs && subs.length > 0 && active.length === 0 && <p className="muted">No active subscriptions.</p>}
         {inactive.length > 0 && (
           <details className="inactive-cards" open={!!q || (isOwner && inactive.some((x) => x.status === "Disputed"))}>
@@ -216,6 +219,7 @@ export function SubscriptionActions() {
             {inactive.map(card)}
           </details>
         )}
+        {subs !== null && <PaginationSummary paged={activePaged} noun={activePaged.total === 1 ? "active subscription" : "active subscriptions"} onPage={setPage} note={`${inactive.length} inactive`} />}
       </section>
       {msg && <p role="status">{msg}</p>}
     </>

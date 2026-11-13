@@ -576,3 +576,20 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .updates-title { margin: 14px 0 0; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: #7fb0ff; }
 .updates-meter { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; color: #9fe3b4; background: rgba(60,200,120,.1); border: 1px solid rgba(60,200,120,.35); }
 .updates-meter.late { color: #ff6b81; background: rgba(255,77,106,.1); border-color: rgba(255,77,106,.4); }
+/* Search bar + pagination summary */
+.searchbar { position: relative; display: flex; align-items: center; margin: 4px 0 16px; max-width: 560px; }
+.searchbar svg { position: absolute; left: 14px; color: #8a90a0; pointer-events: none; }
+.searchbar input { width: 100%; padding: 11px 38px 11px 40px; border-radius: 999px; font: inherit; font-size: 14.5px; color: #fff; background: rgba(14,18,30,.92); border: 1px solid rgba(255,255,255,.14); outline: none; box-shadow: 0 6px 16px rgba(15,23,42,.18); transition: box-shadow .15s, border-color .15s; }
+.searchbar input:focus { border-color: transparent; box-shadow: 0 0 0 2px #3b78ff, 0 0 18px rgba(47,214,232,.35); }
+.searchbar-clear { position: absolute; right: 10px; width: 24px; height: 24px; border-radius: 50%; border: 0; cursor: pointer; font-size: 16px; line-height: 1; color: #fff; background: rgba(255,255,255,.14); }
+.pager { margin: 22px 0 8px; padding: 12px 16px; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; color: #c8ccd8; background: rgba(14,18,30,.92); border: 1px solid rgba(255,255,255,.12); box-shadow: inset 0 1px 0 rgba(255,255,255,.18), 0 8px 18px rgba(15,23,42,.2); }
+.pager-summary { margin: 0; font-size: 13.5px; }
+.pager-summary b { color: #fff; }
+.pager-page { color: #8a90a0; }
+.pager-btns { display: inline-flex; align-items: center; gap: 6px; }
+.pager-btn { min-width: 32px; height: 32px; padding: 0 8px; border-radius: 999px; cursor: pointer; font: inherit; font-size: 13px; font-weight: 600; color: #c8ccd8; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); }
+.pager-btn:hover:not(:disabled) { color: #fff; border-color: rgba(127,176,255,.6); }
+.pager-btn.on { color: #fff; border-color: transparent; background: linear-gradient(135deg, #2fd6e8, #3b78ff 55%, #d92f54); box-shadow: 0 0 12px rgba(59,120,255,.45); }
+.pager-btn:disabled { opacity: .4; cursor: not-allowed; }
+.pager-gap { color: #8a90a0; padding: 0 2px; }
+@media (max-width: 900px) { .pager { margin-bottom: 84px; } }

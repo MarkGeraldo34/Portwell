@@ -153,6 +153,52 @@ export async function readUpdates(sharer: string): Promise<StoredUpdate[]> {
   return read.filter((u): u is StoredUpdate => u !== null);
 }
 
+/** Secret for chat session tokens. */
+export const chatSecret = () => contentSecret() ?? "";
+
+const chatPrefix = (sharer: string, learner: string) => `chat/${sharer}/${learner}/`;
+
+/** Messages live at chat/<sharer>/<learner>/<ts>-<l|s>-<rand>.bin, encrypted. */
+export async function saveChatMessage(sharer: string, learner: string, from: "learner" | "sharer", text: string): Promise<{ ts: number }> {
+  const ts = Date.now();
+  await put(`${chatPrefix(sharer, learner)}${ts}-${from === "sharer" ? "s" : "l"}-${Math.random().toString(36).slice(2, 7)}.bin`, seal(key(), JSON.stringify({ text })), {
+    access: "public",
+    contentType: "text/plain",
+    addRandomSuffix: false,
+    token: blobToken(),
+  });
+  return { ts };
+}
+
+/** Messages newer than `since` (ms), oldest first. Only call after the viewer is authorised for this pair. */
+export async function listChatMessages(sharer: string, learner: string, since: number): Promise<{ from: "learner" | "sharer"; text: string; ts: number }[]> {
+  const items: { url: string; ts: number; from: "learner" | "sharer" }[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await list({ prefix: chatPrefix(sharer, learner), limit: 200, cursor, token: blobToken() });
+    for (const b of page.blobs) {
+      const [ts, who] = (b.pathname.split("/").pop() ?? "").split("-");
+      const n = Number(ts);
+      if (Number.isFinite(n) && n > since) items.push({ url: b.url, ts: n, from: who === "s" ? "sharer" : "learner" });
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor && items.length < 300);
+  items.sort((a, b) => a.ts - b.ts);
+  const read = await Promise.all(
+    items.slice(-100).map(async (m) => {
+      try {
+        const res = await fetch(m.url, { cache: "no-store" });
+        const text = res.ok ? open(key(), await res.text()) : null;
+        const t = text ? (JSON.parse(text) as { text?: unknown }).text : null;
+        return typeof t === "string" ? { from: m.from, text: t, ts: m.ts } : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return read.filter((m): m is { from: "learner" | "sharer"; text: string; ts: number } => m !== null);
+}
+
 export async function readGated(id: string): Promise<GatedContent | null> {
   if (!/^[0-9]+-[a-z0-9]{1,8}$/.test(id)) return null;
   try {

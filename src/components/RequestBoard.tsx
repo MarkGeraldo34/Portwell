@@ -11,6 +11,7 @@ import { scanPost } from "@/lib/risk";
 import { requireAiApproval } from "@/lib/ai-gate";
 import { mailLink } from "@/lib/mail-link";
 import { AccountLink } from "./AccountLink";
+import { DeleteRequestButton } from "./DeleteButtons";
 import { formatDuration } from "@/lib/duration";
 
 interface Card {
@@ -222,7 +223,10 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                 {c.offers.length} offer{c.offers.length === 1 ? "" : "s"}
               </span>
               {mine ? (
-                <span className="muted" style={{ fontSize: 13 }}>Your request</span>
+                <span className="req-actions">
+                  <span className="muted" style={{ fontSize: 13 }}>Your request</span>
+                  <DeleteRequestButton learner={c.req.learner} id={c.req.id} offerSharers={c.offers.map((o) => o.sharer)} onDeleted={() => setCards((cs) => (cs ?? []).filter((x) => !(x.req.learner === c.req.learner && x.req.id === c.req.id)))} />
+                </span>
               ) : offering === id ? (
                 <div className="offer-box">
                   <input type="email" required value={offerEmail} maxLength={120} placeholder="Your email (required, the learner will write to you)" autoComplete="email" onChange={(e) => setOfferEmail(e.target.value)} />

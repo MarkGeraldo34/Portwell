@@ -19,6 +19,7 @@ export default async function Home() {
     title: c.title,
     xHandle: c.xHandle,
     email: c.email,
+    duration: c.duration,
     ethos: c.xHandle ? ethos[c.xHandle.toLowerCase()] : undefined,
     mediaCount: c.media.length,
   }));

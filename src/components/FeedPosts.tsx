@@ -19,6 +19,7 @@ export interface FeedPost {
   sharer: string;
   title: string;
   xHandle?: string;
+  verified?: boolean;
   email?: string;
   ethos?: Ethos;
   mediaCount?: number;
@@ -132,7 +133,7 @@ function Post({ post, n, overall }: { post: FeedPost; n?: Numbers; overall?: Num
         </li>
       </ul>
 
-      <SharerLinks handle={post.xHandle} email={post.email} ethos={post.ethos} />
+      <SharerLinks handle={post.xHandle} email={post.email} ethos={post.ethos} verified={post.verified} />
 
       <div className="post-foot">
         {post.duration && <span className="duration-chip">Shared for {formatDuration(post.duration)}</span>}

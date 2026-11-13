@@ -12,6 +12,10 @@ Crypto newcomers pay a peer who already earns crypto a fixed monthly price in NE
 The payment is held in a NEAR smart contract and released to the sharer in four weekly parts. The learner can
 cancel for a refund of the unreleased parts, or open a dispute that pauses releases until the owner resolves it.
 
+![How a Portwell payment works: pay the exact price, the contract holds it, four weekly releases, refund or dispute](docs/escrow-flow.jpg)
+
+*Illustration of the payment flow (a slide from the demo explainer, not a screenshot of the app).*
+
 ## Problem
 
 People new to crypto learn "ways to earn" from strangers online, pay up front, and have no recourse when the

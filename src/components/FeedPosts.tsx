@@ -10,6 +10,7 @@ import { SharerLinks } from "./SharerLinks";
 import { AccountLink } from "./AccountLink";
 import { DeletePostButton } from "./DeleteButtons";
 import { formatDuration, type Duration } from "@/lib/duration";
+import { PaginationSummary, SearchBar, useListTools } from "./ListTools";
 
 export interface FeedPost {
   id: string;
@@ -62,11 +63,15 @@ export function FeedPosts({ posts }: { posts: FeedPost[] }) {
     };
   }, [posts]);
 
+  const tools = useListTools(posts, (p) => `${p.title} ${p.sharer} ${p.xHandle ?? ""}`, 6);
   return (
     <>
-      {posts.map((p) => (
+      <SearchBar value={tools.query} onChange={tools.setQuery} placeholder="Search by topic, strategy or sharer name" />
+      {tools.searching && tools.filtered.length === 0 && <p className="muted">No strategies match “{tools.query.trim()}”.</p>}
+      {tools.paged.slice.map((p) => (
         <Post key={p.id} post={p} n={stats?.[p.sharer]} />
       ))}
+      <PaginationSummary paged={tools.paged} noun={tools.paged.total === 1 ? "strategy" : "strategies"} onPage={tools.setPage} />
     </>
   );
 }

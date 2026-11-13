@@ -39,7 +39,8 @@ export async function verifyProof(proof: Proof, kind: ProofKind, deps: ProofDeps
   if (m.app !== APP || m.action !== kind || m.account !== proof.accountId || typeof m.iat !== "number") {
     return deny(400, "Message does not match this request");
   }
-  if (kind === "publish" && (typeof m.hash !== "string" || m.hash !== expectHash)) {
+  // publish binds to the post contents; delete binds to the id of the post being deleted
+  if ((kind === "publish" || kind === "delete") && (typeof m.hash !== "string" || m.hash !== expectHash)) {
     return deny(400, "The signed content does not match the post");
   }
   const age = deps.now() - m.iat;

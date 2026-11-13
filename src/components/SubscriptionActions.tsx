@@ -5,6 +5,7 @@ import { AccountLink } from "./AccountLink";
 import { PaginationSummary, SearchBar } from "./ListTools";
 import { paginate } from "@/lib/list-tools";
 import { UpdatesMeter } from "./Updates";
+import { ChatBox } from "./ChatBox";
 import { useWallet } from "./WalletProvider";
 import { ReleaseTimeline, maturedWeeks } from "./ReleaseTimeline";
 import { formatNear, getOwner, getSubscription, listSubscriptionsFor, type SubscriptionView } from "@/lib/contract";
@@ -58,6 +59,7 @@ function Row({
       <p className="sub-progress">{progress(sub)}</p>
       <ReleaseTimeline sub={sub} />
       {open && (isLearner || sub.sharer === me) && <UpdatesMeter sub={sub} isLearner={isLearner} />}
+      {open && (isLearner || sub.sharer === me) && <ChatBox sharer={sub.sharer} learner={sub.learner} />}
       {open && (isLearner || sub.sharer === me) && (
         <p className="offer-prompt" role="note">
           {isLearner ? (

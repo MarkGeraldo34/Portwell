@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
 import { FeedPosts, type FeedPost } from "./FeedPosts";
+import { PaginationSummary } from "./ListTools";
 import { loadBoard } from "@/lib/social";
 import { formatDuration } from "@/lib/duration";
 
@@ -107,6 +108,7 @@ export function Profile({ account }: { account: string }) {
           </p>
         </article>
       ))}
+      {requests !== null && <PaginationSummary paged={{ page: 1, pageCount: 1, from: requests.length ? 1 : 0, to: requests.length, total: requests.length }} noun={requests.length === 1 ? "request" : "requests"} />}
     </div>
   );
 }

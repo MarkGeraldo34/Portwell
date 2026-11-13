@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { authorize, isAccountId, type UnlockRequest } from "@/lib/unlock";
 import { realDeps } from "@/server/access";
 import { cardsBySharer, detailsForSharerPosts } from "@/server/posts";
+import { blobConfigured, readUpdates } from "@/server/blob-store";
 
 // Small in-memory limiter. Each request makes several RPC calls, so keep it modest. Per instance only.
 const hits = new Map<string, number[]>();
@@ -41,5 +42,6 @@ export async function POST(req: Request) {
   }
   if (!decision.ok) return NextResponse.json({ error: decision.error }, { status: decision.status });
 
-  return NextResponse.json({ reason: decision.reason, details: await detailsForSharerPosts(body.sharer) });
+  const updates = blobConfigured() ? await readUpdates(body.sharer).catch(() => []) : [];
+  return NextResponse.json({ reason: decision.reason, details: await detailsForSharerPosts(body.sharer), updates });
 }

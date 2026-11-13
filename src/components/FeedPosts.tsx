@@ -8,6 +8,7 @@ import { reputation } from "@/lib/reputation";
 import type { Ethos } from "@/lib/ethos-types";
 import { SharerLinks } from "./SharerLinks";
 import { AccountLink } from "./AccountLink";
+import { formatDuration, type Duration } from "@/lib/duration";
 
 export interface FeedPost {
   id: string;
@@ -17,6 +18,7 @@ export interface FeedPost {
   email?: string;
   ethos?: Ethos;
   mediaCount?: number;
+  duration?: Duration | null;
 }
 
 interface Numbers {
@@ -131,6 +133,7 @@ function Post({ post, n }: { post: FeedPost; n?: Numbers }) {
       <SharerLinks handle={post.xHandle} email={post.email} ethos={post.ethos} />
 
       <div className="post-foot">
+        {post.duration && <span className="duration-chip">Shared for {formatDuration(post.duration)}</span>}
         {!!post.mediaCount && <span className="muted media-count">{post.mediaCount} media</span>}
         <Link className="post-cta" href={`/sharers/${post.sharer}?post=${encodeURIComponent(post.id)}`}>
           View post →

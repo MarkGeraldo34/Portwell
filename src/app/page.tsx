@@ -25,7 +25,7 @@ export default async function Home() {
   }));
   return (
     <>
-      <h1>Learn to earn crypto, anon!</h1>
+      <h1>Search ways to earn crypto, anon!</h1>
       {posts.length === 0 && <p className="muted">No posts yet. Be the first to share one.</p>}
       <FeedPosts posts={posts} />
       {hidden > 0 && <p className="muted">{hidden} post(s) hidden by the scam check.</p>}

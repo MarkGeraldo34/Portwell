@@ -32,6 +32,7 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
   const { accountId, signIn, signMessage } = useWallet();
   const [details, setDetails] = useState<Detail[] | null>(null);
   const [updates, setUpdates] = useState<UpdateItem[]>([]);
+  const [role, setRole] = useState<"subscriber" | "sharer">("subscriber");
   const [bump, setBump] = useState(0); // refreshes the public update count after the sharer posts
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
@@ -58,6 +59,7 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Could not unlock");
+      setRole(json.reason === "sharer" ? "sharer" : "subscriber");
       setDetails(json.details);
       setUpdates(Array.isArray(json.updates) ? json.updates : []);
       setMsg("");
@@ -95,21 +97,37 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
             <UpdateForm sharer={sharer} postId={t.id} onPosted={() => setBump((b) => b + 1)} />
             {media[t.id]}
             {d ? (
-              <>
-                <ol>
+              <div className="reader">
+                <div className="reader-head">
+                  <span className={`reader-badge${role === "sharer" ? " mine" : ""}`}>{role === "sharer" ? "Your post · subscriber view" : "Unlocked for you"}</span>
+                  <p>
+                    {role === "sharer"
+                      ? "This is exactly what your subscribers read. Keep adding an update for every remaining week of their subscription."
+                      : <>You are subscribed to <b>@{sharer}</b>. Work through the steps at your own pace; weekly updates from the sharer appear at the bottom.</>}
+                  </p>
+                </div>
+
+                <h4 className="reader-h">Steps</h4>
+                <ol className="reader-steps">
                   {d.steps.map((step) => (
                     <li key={step}>{step}</li>
                   ))}
                 </ol>
-                <p>
-                  <strong>Risk ({t.risk}):</strong> {d.risks}
+
+                <div className="reader-risk">
+                  <b>Risk level: {t.risk}</b>
+                  <p>{d.risks}</p>
+                </div>
+
+                <p className="reader-proof">
+                  Proof wallet: {d.proofWallet ? <AccountLink account={d.proofWallet} full /> : "none linked yet, so treat this post with extra care"}
                 </p>
-                <h4 className="updates-title">Updates from the sharer</h4>
+
+                <h4 className="reader-h">Updates from the sharer</h4>
                 <UpdatesList updates={updates.filter((u) => u.postId === t.id)} />
-                <p className="muted">
-                  Proof wallet: {d.proofWallet ? <AccountLink account={d.proofWallet} full /> : "none linked yet — treat unverified posts with extra care"}
-                </p>
-              </>
+
+                <p className="reader-disclaimer" role="note">This post is not a financial advise but can work if you dyor too</p>
+              </div>
             ) : (
               <div className="sealed" aria-label={`${t.steps} steps, risk notes and proof wallet are sealed until you subscribe`}>
                 <span className="sealed-bars" aria-hidden="true"><i /><i /><i /></span>

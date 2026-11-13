@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AccountLink } from "./AccountLink";
+import { UpdatesMeter } from "./Updates";
 import { useWallet } from "./WalletProvider";
 import { ReleaseTimeline, maturedWeeks } from "./ReleaseTimeline";
 import { formatNear, getOwner, getSubscription, listSubscriptionsFor, type SubscriptionView } from "@/lib/contract";
@@ -54,6 +55,7 @@ function Row({
       </p>
       <p className="sub-progress">{progress(sub)}</p>
       <ReleaseTimeline sub={sub} />
+      {open && (isLearner || sub.sharer === me) && <UpdatesMeter sub={sub} isLearner={isLearner} />}
       {open && (isLearner || sub.sharer === me) && (
         <p className="offer-prompt" role="note">
           {isLearner ? (

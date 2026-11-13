@@ -552,3 +552,9 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .note-open { font-size: 13px; color: #7fb0ff; text-decoration: none; }
 .note-open:hover { text-decoration: underline; }
 .row > .acct-link code { background: transparent; }
+/* Duration inputs and chips */
+.duration-row { display: flex; gap: 8px; margin-top: 6px; }
+.duration-row input { width: 90px; }
+.duration-row select { flex: 1; }
+.duration-chip { display: inline-block; font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 999px; color: #7fb0ff; background: rgba(59,120,255,.14); border: 1px solid rgba(59,120,255,.35); }
+.budget .duration-chip { margin-top: 6px; }

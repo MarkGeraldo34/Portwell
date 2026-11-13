@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
-import { getStats, listSubscriptionsFor } from "@/lib/contract";
+import { listSubscriptionsFor } from "@/lib/contract";
+import { attributeToPosts } from "@/lib/post-stats";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { reputation } from "@/lib/reputation";
 import type { Ethos } from "@/lib/ethos-types";
@@ -37,27 +38,10 @@ export function FeedPosts({ posts }: { posts: FeedPost[] }) {
   useEffect(() => {
     if (!CONTRACT_CONFIGURED) return;
     let cancelled = false;
-    (async () => {
-      const sharers = Array.from(new Set(posts.map((p) => p.sharer)));
-      const [all, perSharer] = await Promise.all([
-        listSubscriptionsFor("", { includeAll: true }),
-        Promise.all(sharers.map((s) => getStats(s).catch(() => null))),
-      ]);
-      const out: Record<string, Numbers> = {};
-      sharers.forEach((s, i) => {
-        const st = perSharer[i];
-        out[s] = {
-          subscriptions: st?.subscriptions ?? 0,
-          disputes: st?.disputes ?? 0,
-          // A refund is money that went back to the learner: a cancel or a dispute resolved for the learner
-          // that left part of the payment unreleased. A cancel after every week was paid out refunds nothing.
-          refunds: all.filter(
-            (x) => x.sharer === s && (x.status === "Cancelled" || x.status === "Resolved") && BigInt(x.released) < BigInt(x.total),
-          ).length,
-        };
-      });
-      if (!cancelled) setStats(out);
-    })().catch(() => {});
+    // Numbers on a card are for that post only; the sharer's overall numbers live on the leaderboard and the profile page.
+    listSubscriptionsFor("", { includeAll: true })
+      .then((all) => !cancelled && setStats(attributeToPosts(all, posts)))
+      .catch(() => {});
     return () => {
       cancelled = true;
     };
@@ -69,7 +53,7 @@ export function FeedPosts({ posts }: { posts: FeedPost[] }) {
       <SearchBar value={tools.query} onChange={tools.setQuery} placeholder="Search by topic, strategy or sharer name" />
       {tools.searching && tools.filtered.length === 0 && <p className="muted">No strategies match “{tools.query.trim()}”.</p>}
       {tools.paged.slice.map((p) => (
-        <Post key={p.id} post={p} n={stats?.[p.sharer]} />
+        <Post key={p.id} post={p} n={stats?.[p.id]} />
       ))}
       <PaginationSummary paged={tools.paged} noun={tools.paged.total === 1 ? "strategy" : "strategies"} onPage={tools.setPage} />
     </>

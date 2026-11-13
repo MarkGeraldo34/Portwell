@@ -29,6 +29,13 @@ test("a proof for different content, another action, or another account is rejec
   assert.equal((await verifyProof(other, "publish", deps(), "abc")).ok, false);
 });
 
+test("a delete proof is bound to the post id", async () => {
+  const p = sign(proofMessage("delete", "sam.testnet", NOW, "123-abc"));
+  assert.equal((await verifyProof(p, "delete", deps(), "123-abc")).ok, true);
+  assert.equal((await verifyProof(p, "delete", deps(), "999-zzz")).ok, false);
+  assert.equal((await verifyProof(p, "publish", deps(), "123-abc")).ok, false);
+});
+
 test("expired, tampered and wrong-key proofs are rejected", async () => {
   const old = sign(proofMessage("upload", "sam.testnet", NOW - 11 * 60 * 1000));
   assert.equal((await verifyProof(old, "upload", deps())).ok, false);

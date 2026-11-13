@@ -5,6 +5,7 @@ import { Buffer } from "buffer";
 import { useWallet } from "./WalletProvider";
 import { VerdictTag } from "./RiskPanel";
 import { AccountLink } from "./AccountLink";
+import { formatDuration, type Duration } from "@/lib/duration";
 import { SealedSubscribe } from "./SubscribePanel";
 import type { Verdict } from "@/lib/risk";
 import { APP, RECIPIENT } from "@/lib/unlock";
@@ -15,6 +16,7 @@ interface Teaser {
   summary: string;
   risk: string;
   capitalNeededNear: number;
+  duration: Duration | null;
   steps: number;
   verdict: Verdict;
 }
@@ -76,6 +78,12 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
               <span>{t.risk} risk</span>
               <span className="dot">•</span>
               <span>{t.capitalNeededNear} NEAR to start</span>
+              {t.duration && (
+                <>
+                  <span className="dot">•</span>
+                  <span>shared for {formatDuration(t.duration)}</span>
+                </>
+              )}
             </p>
             <p style={{ margin: "0 0 10px", fontSize: "14.5px" }}>{t.summary}</p>
             <SealedSubscribe withAmount />

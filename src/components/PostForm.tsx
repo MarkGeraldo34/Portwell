@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Buffer } from "buffer";
 import { upload, uploadPresigned } from "@vercel/blob/client";
 import { useWallet } from "./WalletProvider";
+import { VerifyX } from "./VerifyX";
 import { hashPost, normalizePost, POST_LIMITS, validateMedia, type PostInput } from "@/lib/post-format";
 import { proofMessage, RECIPIENT, type ProofKind } from "@/lib/proof-message";
 import { scanPost } from "@/lib/risk";
@@ -61,6 +62,7 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
   const { accountId, signIn, signMessage, call } = useWallet();
   const [unpaid, setUnpaid] = useState<string | null>(null); // capital whose monthly price still needs saving
   const [f, setF] = useState({ title: "", summary: "", steps: "", risks: "", risk: "medium", capital: "1", durationN: "1", durationUnit: "months", xHandle: "", email: "" });
+  const [verifiedX, setVerifiedX] = useState<string | null>(null); // handle proven by tweet challenge
   const [media, setMedia] = useState<MediaEntry[]>([]);
   const [link, setLink] = useState("");
   const [msg, setMsg] = useState("");
@@ -135,6 +137,7 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
 
   async function publish() {
     if (!accountId) return signIn();
+    if (!verifiedX) return say("Verify your X handle first: get your code, post it from that X account and paste the tweet link.", true);
     const input: PostInput = {
       title: f.title,
       summary: f.summary,
@@ -144,7 +147,7 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
       capitalNeededNear: f.capital,
       durationN: f.durationN,
       durationUnit: f.durationUnit,
-      xHandle: f.xHandle,
+      xHandle: verifiedX,
       email: f.email,
       media: media.map((m) => ({ url: m.url, upload: m.upload })),
     };
@@ -233,8 +236,8 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
           </span>
         </label>
       </div>
-      <div className="row two">
-        {text("xHandle", "Your X handle (required)", { ph: "@yourhandle", max: 16 })}
+      <VerifyX onChange={setVerifiedX} />
+      <div className="row">
         {text("email", "Your email (required)", { ph: "you@example.com", max: POST_LIMITS.email, type: "email" })}
       </div>
 
@@ -270,7 +273,7 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
         <button className="btn" disabled={busy || uploading} onClick={() => void publish()}>
           {!accountId ? "Connect wallet to publish" : busy ? "Publishing…" : "Publish post"}
         </button>
-        <button className="btn ghost" type="button" onClick={() => setF({ ...f, ...SCAM_EXAMPLE, xHandle: f.xHandle || "@scamdemo", email: f.email || "demo@example.com" })}>
+        <button className="btn ghost" type="button" onClick={() => setF({ ...f, ...SCAM_EXAMPLE, email: f.email || "demo@example.com" })}>
           Load a scam example
         </button>
       </div>

@@ -629,3 +629,5 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .chat-form input { flex: 1; min-width: 0; padding: 9px 14px; border-radius: 999px; font: inherit; font-size: 14px; color: #fff; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); outline: none; }
 .chat-form input:focus { border-color: #3b78ff; }
 .reader .chat { margin-top: 14px; }
+/* Delete controls sit above the stretched "View post" link so they can always be clicked */
+.btn-delete, .delete-confirm, .delete-locked { position: relative; z-index: 3; }

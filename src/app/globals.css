@@ -594,3 +594,21 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .pager-gap { color: #8a90a0; padding: 0 2px; }
 @media (max-width: 900px) { .pager { margin-bottom: 84px; } }
 .profile-stats { flex-wrap: wrap; }
+/* Unlocked post: a light "reading" panel, clearly different from the dark site prompts */
+.reader { margin-top: 14px; padding: 18px 18px 16px; border-radius: 16px; color: #1b2033; background: linear-gradient(180deg, #fbfcff, #f1f4fb); border: 1px solid #dfe4f2; border-left: 5px solid #3b78ff; box-shadow: 0 10px 24px rgba(15,23,42,.28), inset 0 1px 0 #fff; line-height: 1.6; font-size: 15.5px; }
+.reader p, .reader li, .reader b, .reader h4 { color: inherit; }
+.reader .muted, .reader .updates li .muted { color: #5b6177; }
+.reader a { color: #2457d6; }
+.reader-head { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px dashed #cdd5ea; }
+.reader-head p { margin: 8px 0 0; font-size: 14px; color: #3d4560; }
+.reader-badge { display: inline-block; font-size: 11px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; padding: 4px 12px; border-radius: 999px; color: #fff; background: linear-gradient(135deg, #2fd6e8, #3b78ff); }
+.reader-badge.mine { background: linear-gradient(135deg, #3b78ff, #d92f54); }
+.reader-h { margin: 18px 0 8px; font-size: 12px; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; color: #3b5bb5; }
+.reader-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; counter-reset: step; }
+.reader-steps li { counter-increment: step; position: relative; padding: 10px 12px 10px 48px; border-radius: 12px; background: #fff; border: 1px solid #e3e8f4; }
+.reader-steps li::before { content: counter(step); position: absolute; left: 12px; top: 10px; width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 800; color: #fff; background: linear-gradient(135deg, #3b78ff, #d92f54); }
+.reader-risk { margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: #fff6e6; border: 1px solid #f3d9a4; }
+.reader-risk p { margin: 4px 0 0; }
+.reader-proof { margin: 12px 0 0; font-size: 14px; color: #3d4560; }
+.reader .updates li { background: #fff; border: 1px solid #e3e8f4; border-left: 3px solid #3b78ff; }
+.reader-disclaimer { margin: 18px 0 0; padding: 10px 14px; border-radius: 10px; font-weight: 700; font-size: 14px; text-align: center; color: #d4162f !important; background: #fff0f2; border: 1px solid #f5b8c1; }

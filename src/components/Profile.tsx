@@ -5,12 +5,14 @@ import { useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
 import { FeedPosts, type FeedPost } from "./FeedPosts";
 import { loadBoard } from "@/lib/social";
+import { formatDuration } from "@/lib/duration";
 
 interface Req {
   id: string;
   title: string;
   details: string;
   budget: number;
+  duration: string;
   ts: number;
   offers: number;
 }
@@ -39,7 +41,7 @@ export function Profile({ account }: { account: string }) {
         setRequests(
           board
             .filter((b) => b.request.learner === account)
-            .map((b) => ({ id: b.request.id, title: b.request.title, details: b.request.details, budget: b.request.budget, ts: b.request.ts, offers: b.offers.length })),
+            .map((b) => ({ id: b.request.id, title: b.request.title, details: b.request.details, budget: b.request.budget, duration: b.request.duration ? formatDuration(b.request.duration) : "", ts: b.request.ts, offers: b.offers.length })),
         );
       })
       .catch(() => live && setRequests([]));
@@ -97,7 +99,7 @@ export function Profile({ account }: { account: string }) {
         <article key={r.id} className="card profile-req">
           <div className="row">
             <strong>{r.title}</strong>
-            <span className="chip">{r.budget} NEAR</span>
+            <span className="chip">{r.budget} NEAR{r.duration ? ` for ${r.duration}` : ""}</span>
           </div>
           {r.details && <p className="muted" style={{ margin: "6px 0 0" }}>{r.details}</p>}
           <p className="muted" style={{ margin: "8px 0 0", fontSize: 13 }}>

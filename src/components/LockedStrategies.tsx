@@ -5,6 +5,7 @@ import { Buffer } from "buffer";
 import { useWallet } from "./WalletProvider";
 import { VerdictTag } from "./RiskPanel";
 import { AccountLink } from "./AccountLink";
+import { UpdateCount, UpdateForm, UpdatesList, type UpdateItem } from "./Updates";
 import { formatDuration, type Duration } from "@/lib/duration";
 import { SealedSubscribe } from "./SubscribePanel";
 import type { Verdict } from "@/lib/risk";
@@ -30,6 +31,8 @@ interface Detail {
 export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: string; teasers: Teaser[]; media?: Record<string, ReactNode> }) {
   const { accountId, signIn, signMessage } = useWallet();
   const [details, setDetails] = useState<Detail[] | null>(null);
+  const [updates, setUpdates] = useState<UpdateItem[]>([]);
+  const [bump, setBump] = useState(0); // refreshes the public update count after the sharer posts
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -56,6 +59,7 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
       const json = await res.json();
       if (!res.ok) throw new Error(json.error ?? "Could not unlock");
       setDetails(json.details);
+      setUpdates(Array.isArray(json.updates) ? json.updates : []);
       setMsg("");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Could not unlock");
@@ -87,6 +91,8 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
             </p>
             <p style={{ margin: "0 0 10px", fontSize: "14.5px" }}>{t.summary}</p>
             <SealedSubscribe withAmount />
+            <p style={{ margin: "0 0 10px" }}><UpdateCount key={bump} sharer={sharer} /></p>
+            <UpdateForm sharer={sharer} postId={t.id} onPosted={() => setBump((b) => b + 1)} />
             {media[t.id]}
             {d ? (
               <>
@@ -98,6 +104,8 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
                 <p>
                   <strong>Risk ({t.risk}):</strong> {d.risks}
                 </p>
+                <h4 className="updates-title">Updates from the sharer</h4>
+                <UpdatesList updates={updates.filter((u) => u.postId === t.id)} />
                 <p className="muted">
                   Proof wallet: {d.proofWallet ? <AccountLink account={d.proofWallet} full /> : "none linked yet — treat unverified posts with extra care"}
                 </p>

@@ -6,6 +6,9 @@ import { useWallet } from "./WalletProvider";
 import { FeedPosts, type FeedPost } from "./FeedPosts";
 import { PaginationSummary } from "./ListTools";
 import { loadBoard } from "@/lib/social";
+import { CONTRACT_CONFIGURED } from "@/lib/config";
+import { getStats, listSubscriptionsFor } from "@/lib/contract";
+import { buildRows, type Row } from "@/lib/leaderboard";
 import { formatDuration } from "@/lib/duration";
 
 interface Req {
@@ -27,6 +30,7 @@ export function Profile({ account }: { account: string }) {
   const [shares, setShares] = useState<FeedPost[] | null>(null);
   const [requests, setRequests] = useState<Req[] | null>(null);
   const [copied, setCopied] = useState(false);
+  const [overall, setOverall] = useState<Row | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -36,6 +40,13 @@ export function Profile({ account }: { account: string }) {
       .then((r) => r.json())
       .then((j: { cards?: FeedPost[] }) => live && setShares(j.cards ?? []))
       .catch(() => live && setShares([]));
+    // The sharer's overall numbers (all their posts together) are shown here and on the leaderboard.
+    setOverall(null);
+    if (CONTRACT_CONFIGURED) {
+      Promise.all([listSubscriptionsFor(account), getStats(account).catch(() => null)])
+        .then(([subs, st]) => live && setOverall(buildRows(subs.filter((s) => s.sharer === account), { [account]: st }, [account])[0] ?? null))
+        .catch(() => {});
+    }
     loadBoard(50)
       .then((board) => {
         if (!live) return;
@@ -73,6 +84,13 @@ export function Profile({ account }: { account: string }) {
           <div className="profile-stats">
             <span><b>{shares ? shares.length : "–"}</b> shares</span>
             <span><b>{requests ? requests.length : "–"}</b> requests</span>
+            {overall && (
+              <>
+                <span><b>{overall.subscriptions}</b> subscriptions</span>
+                <span><b>{overall.disputes}</b> disputes</span>
+                <span><b>{overall.refunds}</b> refunds</span>
+              </>
+            )}
           </div>
         </div>
         <button className="btn ghost" onClick={() => void copy()}>{copied ? "Copied" : "Copy ID"}</button>

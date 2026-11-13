@@ -568,3 +568,11 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .post-foot { flex-wrap: wrap; gap: 8px; }
 .req-actions { display: inline-flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .delete-locked { font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px; color: #8a90a0; background: rgba(255,255,255,.04); border: 1px dashed rgba(255,255,255,.2); }
+/* Weekly updates */
+.update-form { margin-top: 14px; }
+.updates { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; }
+.updates li { padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.05); border-left: 3px solid #3b78ff; }
+.updates li p { margin: 6px 0 0; white-space: pre-wrap; }
+.updates-title { margin: 14px 0 0; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; color: #7fb0ff; }
+.updates-meter { margin: 10px 0 0; padding: 8px 12px; border-radius: 10px; font-size: 13px; color: #9fe3b4; background: rgba(60,200,120,.1); border: 1px solid rgba(60,200,120,.35); }
+.updates-meter.late { color: #ff6b81; background: rgba(255,77,106,.1); border-color: rgba(255,77,106,.4); }

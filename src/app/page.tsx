@@ -2,6 +2,7 @@ import { FeedPosts } from "@/components/FeedPosts";
 import { scanPost } from "@/lib/risk";
 import { loadCards } from "@/server/posts";
 import { ethosFor } from "@/server/ethos";
+import { xVerifiedFor } from "@/server/blob-store";
 
 export const dynamic = "force-dynamic";
 
@@ -12,7 +13,10 @@ export default async function Home() {
     (c) => scanPost({ title: c.title, summary: c.summary, steps: [], risks: "Risks are listed in the locked section.", risk: c.risk, capitalNeededNear: c.capitalNeededNear }).verdict !== "block",
   );
   const hidden = cards.length - visible.length;
-  const ethos = await ethosFor(visible.map((c) => c.xHandle));
+  // A handle only counts when the sharer proved they own it (tweet challenge). Ethos is looked up for those alone.
+  const proven = await xVerifiedFor(visible.map((c) => c.sharer)).catch(() => ({}) as Record<string, string>);
+  const isVerified = (c: { sharer: string; xHandle?: string }) => !!c.xHandle && proven[c.sharer]?.toLowerCase() === c.xHandle.toLowerCase();
+  const ethos = await ethosFor(visible.filter(isVerified).map((c) => c.xHandle));
   const posts = visible.map((c) => ({
     id: c.id,
     sharer: c.sharer,
@@ -20,7 +24,8 @@ export default async function Home() {
     xHandle: c.xHandle,
     email: c.email,
     duration: c.duration,
-    ethos: c.xHandle ? ethos[c.xHandle.toLowerCase()] : undefined,
+    verified: isVerified(c),
+    ethos: c.xHandle && isVerified(c) ? ethos[c.xHandle.toLowerCase()] : undefined,
     mediaCount: c.media.length,
   }));
   return (

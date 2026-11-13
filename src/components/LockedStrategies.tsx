@@ -5,6 +5,7 @@ import { Buffer } from "buffer";
 import { useWallet } from "./WalletProvider";
 import { VerdictTag } from "./RiskPanel";
 import { AccountLink } from "./AccountLink";
+import { ChatBox } from "./ChatBox";
 import { UpdateCount, UpdateForm, UpdatesList, type UpdateItem } from "./Updates";
 import { formatDuration, type Duration } from "@/lib/duration";
 import { SealedSubscribe } from "./SubscribePanel";
@@ -126,6 +127,7 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
                 <h4 className="reader-h">Updates from the sharer</h4>
                 <UpdatesList updates={updates.filter((u) => u.postId === t.id)} />
 
+                {role === "subscriber" && accountId && <ChatBox sharer={sharer} learner={accountId} />}
                 <p className="reader-disclaimer" role="note">This post is not a financial advise but can work if you dyor too</p>
               </div>
             ) : (

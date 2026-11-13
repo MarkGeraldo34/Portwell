@@ -631,3 +631,21 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .reader .chat { margin-top: 14px; }
 /* Delete controls sit above the stretched "View post" link so they can always be clicked */
 .btn-delete, .delete-confirm, .delete-locked { position: relative; z-index: 3; }
+/* X handle verification (tweet challenge) */
+.xv { display: grid; gap: 10px; padding: 14px; border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); margin: 10px 0; width: 100%; }
+.xv.ok { border-color: rgba(52,211,153,.45); background: rgba(52,211,153,.07); }
+.xv-title { font-size: 14px; }
+.xv-hint { margin: 0; font-size: 13px; }
+.xv-done { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-weight: 600; }
+.xv-tick { display: inline-grid; place-items: center; width: 16px; height: 16px; border-radius: 50%; font-size: 10px; font-weight: 800; color: #04210f; background: #34d399; margin-left: 4px; }
+.xv-step { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.xv-step.col { align-items: flex-start; }
+.xv-step input { flex: 1 1 220px; min-width: 0; }
+.xv-num { flex: none; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 12px; font-weight: 700; color: #fff; background: linear-gradient(135deg, #d92f54, #3b78ff); }
+.xv-code { display: grid; gap: 6px; flex: 1 1 240px; min-width: 0; }
+.xv-code code { justify-self: start; font-size: 20px; font-weight: 800; letter-spacing: .12em; padding: 4px 12px; border-radius: 10px; background: rgba(0,0,0,.35); color: #fff; }
+.xv-code q { font-size: 13px; line-height: 1.4; user-select: all; word-break: break-word; }
+.xv-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.xv-link { background: none; border: 0; padding: 0; font: inherit; font-size: 13px; color: #6aa2ff; cursor: pointer; text-decoration: underline; justify-self: start; }
+.contact-btn.unverified { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #ffb454; background: rgba(255,180,84,.1); border-color: rgba(255,180,84,.45); cursor: help; }
+.contact-btn .xv-tick { margin-left: 2px; }

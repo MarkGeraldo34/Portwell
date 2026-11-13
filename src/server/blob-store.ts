@@ -95,6 +95,64 @@ export async function deletePost(id: string, sharer: string): Promise<"deleted" 
   return "deleted";
 }
 
+export interface StoredUpdate {
+  postId: string;
+  title: string;
+  body: string;
+  ts: number;
+}
+
+/** Updates live at updates/<sharer>/<ts>-<rand>.bin (encrypted), so the public listing shows how many and when, never what. */
+export async function saveUpdate(sharer: string, u: { postId: string; title: string; body: string }): Promise<StoredUpdate> {
+  const ts = Date.now();
+  const stored: StoredUpdate = { ...u, ts };
+  await put(`updates/${sharer}/${ts}-${Math.random().toString(36).slice(2, 8)}.bin`, seal(key(), JSON.stringify(stored)), {
+    access: "public",
+    contentType: "text/plain",
+    addRandomSuffix: false,
+    token: blobToken(),
+  });
+  return stored;
+}
+
+async function updateBlobs(sharer: string): Promise<{ url: string; ts: number }[]> {
+  const out: { url: string; ts: number }[] = [];
+  let cursor: string | undefined;
+  do {
+    const page = await list({ prefix: `updates/${sharer}/`, limit: 200, cursor, token: blobToken() });
+    for (const b of page.blobs) {
+      const ts = Number(b.pathname.split("/").pop()?.split("-")[0]);
+      if (Number.isFinite(ts)) out.push({ url: b.url, ts });
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor && out.length < 400);
+  return out.sort((a, b) => b.ts - a.ts);
+}
+
+/** When each update was posted. Public: carries no content. */
+export async function updateTimes(sharer: string): Promise<number[]> {
+  return (await updateBlobs(sharer)).map((b) => b.ts);
+}
+
+/** The decrypted updates, newest first. Only call this after the viewer has been authorised. */
+export async function readUpdates(sharer: string): Promise<StoredUpdate[]> {
+  const blobs = (await updateBlobs(sharer)).slice(0, 50);
+  const read = await Promise.all(
+    blobs.map(async (b) => {
+      try {
+        const res = await fetch(b.url, { cache: "no-store" });
+        const text = res.ok ? open(key(), await res.text()) : null;
+        if (!text) return null;
+        const p = JSON.parse(text) as Partial<StoredUpdate>;
+        return typeof p.title === "string" && typeof p.body === "string" && typeof p.postId === "string" ? ({ postId: p.postId, title: p.title, body: p.body, ts: b.ts } as StoredUpdate) : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return read.filter((u): u is StoredUpdate => u !== null);
+}
+
 export async function readGated(id: string): Promise<GatedContent | null> {
   if (!/^[0-9]+-[a-z0-9]{1,8}$/.test(id)) return null;
   try {

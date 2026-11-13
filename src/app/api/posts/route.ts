@@ -4,8 +4,11 @@ import { decide, scanPost, type RiskInput } from "@/lib/risk";
 import { aiReview } from "@/lib/ai-review";
 import { hashPost, normalizePost, type PostInput } from "@/lib/post-format";
 import { verifyProof, type Proof } from "@/lib/publish-auth";
+import { CONTRACT_CONFIGURED } from "@/lib/config";
+import { listSubscriptionsFor } from "@/lib/contract";
+import { postLocked } from "@/lib/delete-rules";
 import { realDeps } from "@/server/access";
-import { blobConfigured, blobProblem, listCards, savePost } from "@/server/blob-store";
+import { blobConfigured, blobProblem, deletePost, listCards, savePost } from "@/server/blob-store";
 
 export const maxDuration = 60; // the AI review can take a while
 
@@ -83,4 +86,36 @@ export async function GET(req: Request) {
   } catch {
     return NextResponse.json({ posts: [] });
   }
+}
+
+/** Delete one of your own posts. The wallet must sign the id of the post, and the post must belong to that account. */
+export async function DELETE(req: Request) {
+  const body = (await req.json().catch(() => null)) as { id?: string; auth?: Proof } | null;
+  if (!body?.id || typeof body.id !== "string" || !body.auth) return NextResponse.json({ error: "Invalid request" }, { status: 400 });
+  let proof;
+  try {
+    proof = await verifyProof(body.auth, "delete", realDeps, body.id);
+  } catch {
+    return NextResponse.json({ error: "Could not verify your wallet right now. Try again." }, { status: 503 });
+  }
+  if (!proof.ok) return NextResponse.json({ error: proof.error }, { status: proof.status });
+  // A post cannot be deleted while someone is subscribed to its sharer. Fail closed if the chain cannot be read.
+  if (CONTRACT_CONFIGURED) {
+    try {
+      if (postLocked(await listSubscriptionsFor(proof.accountId), proof.accountId)) {
+        return NextResponse.json({ error: "This post has an active subscriber, so it cannot be deleted until their subscription ends." }, { status: 409 });
+      }
+    } catch {
+      return NextResponse.json({ error: "Could not check subscriptions right now, so nothing was deleted. Try again." }, { status: 503 });
+    }
+  }
+  try {
+    const result = await deletePost(body.id, proof.accountId);
+    if (result === "forbidden") return NextResponse.json({ error: "Only the person who posted this can delete it." }, { status: 403 });
+    if (result === "not_found") return NextResponse.json({ error: "That post no longer exists." }, { status: 404 });
+  } catch {
+    return NextResponse.json({ error: "Could not delete the post right now. Try again." }, { status: 503 });
+  }
+  revalidatePath("/");
+  return NextResponse.json({ ok: true });
 }

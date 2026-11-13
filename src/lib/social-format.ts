@@ -79,6 +79,11 @@ export function buildRequestSet(account: string, id: string, value: RequestValue
   return { data: { [account]: { [APP]: { request: { [id]: JSON.stringify(value) } } } }, options: WRITE_OPTIONS };
 }
 
+/** Arguments for Social DB `set` that remove a request: writing null deletes the key. Only its own account can do this. */
+export function buildRequestDelete(account: string, id: string) {
+  return { data: { [account]: { [APP]: { request: { [id]: null } } } }, options: WRITE_OPTIONS };
+}
+
 /** Arguments for Social DB `set`: an offer under the sharer's own account, tied to one request. */
 export function buildOfferSet(account: string, learner: string, requestId: string, value: OfferValue) {
   return { data: { [account]: { [APP]: { offer: { [offerId(learner, requestId)]: JSON.stringify(value) } } } }, options: WRITE_OPTIONS };

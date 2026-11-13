@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { AccountLink } from "@/components/AccountLink";
+import { PaginationSummary } from "@/components/ListTools";
 import { SubscribePanel, SubscribeProvider } from "@/components/SubscribePanel";
 import { LockedStrategies } from "@/components/LockedStrategies";
 import { MediaGallery } from "@/components/MediaGallery";
@@ -61,6 +62,7 @@ export default async function SharerPage({ params, searchParams }: { params: Pro
           <LockedStrategies sharer={sharer} teasers={teasers} media={media} />
         </>
       )}
+      <PaginationSummary paged={{ page: 1, pageCount: 1, from: shown.length ? 1 : 0, to: shown.length, total: shown.length }} noun={shown.length === 1 ? "post" : "posts"} />
     </SubscribeProvider>
   );
 }

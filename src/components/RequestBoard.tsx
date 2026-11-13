@@ -11,6 +11,7 @@ import { scanPost } from "@/lib/risk";
 import { requireAiApproval } from "@/lib/ai-gate";
 import { mailLink } from "@/lib/mail-link";
 import { AccountLink } from "./AccountLink";
+import { PaginationSummary, SearchBar, useListTools } from "./ListTools";
 import { DeleteRequestButton } from "./DeleteButtons";
 import { formatDuration } from "@/lib/duration";
 
@@ -124,6 +125,12 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
 
   // Request strategy shows only your own requests (and the offers you got); Requests shows everyone's.
   const shown = mode !== "list" ? cards?.filter((c) => c.req.learner === accountId) : cards;
+  const tools = useListTools(
+    shown ?? [],
+    (c) => `${c.req.title} ${c.req.details} ${c.req.learner} ${c.offers.map((o) => o.sharer).join(" ")}`,
+    5,
+  );
+  const visible = tools.paged.slice;
 
   return (
     <>
@@ -165,10 +172,12 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
 
       {cards === null && <p className="muted">Loading requests…</p>}
       {loadErr && <p className="muted">Could not load requests right now ({loadErr}). Try again in a moment.</p>}
+      {mode !== "form" && shown && shown.length > 0 && <SearchBar value={tools.query} onChange={tools.setQuery} placeholder="Search by topic, request or sharer name" />}
+      {mode !== "form" && tools.searching && tools.filtered.length === 0 && <p className="muted">No requests match “{tools.query.trim()}”.</p>}
       {shown?.length === 0 && !loadErr && <p className="muted">{mode !== "list" ? (accountId ? "You have not requested a strategy yet." : "Connect your wallet to see your requests.") : "No requests yet. Learners who ask for a strategy will show up here."}</p>}
 
       {mode === "form" && shown && shown.length > 0 && <h2 className="board-title">Your requests</h2>}
-      {shown?.map((c) => {
+      {visible.map((c) => {
         const id = `${c.req.learner}/${c.req.id}`;
         const mine = c.req.learner === accountId;
         return (
@@ -243,6 +252,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
           </article>
         );
       })}
+      {cards !== null && !loadErr && <PaginationSummary paged={tools.paged} noun={tools.paged.total === 1 ? "request" : "requests"} onPage={tools.setPage} />}
     </>
   );
 }

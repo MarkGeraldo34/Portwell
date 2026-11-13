@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
-import { listSubscriptionsFor } from "@/lib/contract";
+import { getStats, listSubscriptionsFor } from "@/lib/contract";
+import { buildRows } from "@/lib/leaderboard";
 import { attributeToPosts } from "@/lib/post-stats";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { reputation } from "@/lib/reputation";
@@ -34,13 +35,23 @@ const short = (a: string) => (a.length > 28 ? `${a.slice(0, 14)}…${a.slice(-10
 
 export function FeedPosts({ posts }: { posts: FeedPost[] }) {
   const [stats, setStats] = useState<Record<string, Numbers> | null>(null);
+  const [overall, setOverall] = useState<Record<string, Numbers> | null>(null); // per sharer, for the reputation gauge only
 
   useEffect(() => {
     if (!CONTRACT_CONFIGURED) return;
     let cancelled = false;
     // Numbers on a card are for that post only; the sharer's overall numbers live on the leaderboard and the profile page.
-    listSubscriptionsFor("", { includeAll: true })
-      .then((all) => !cancelled && setStats(attributeToPosts(all, posts)))
+    // The reputation gauge is the one exception: it shows the sharer's overall record, the same as the leaderboard.
+    const sharers = Array.from(new Set(posts.map((p) => p.sharer)));
+    Promise.all([listSubscriptionsFor("", { includeAll: true }), Promise.all(sharers.map((s) => getStats(s).catch(() => null)))])
+      .then(([all, perSharer]) => {
+        if (cancelled) return;
+        setStats(attributeToPosts(all, posts));
+        const st: Record<string, { subscriptions: number; disputes: number } | null> = {};
+        sharers.forEach((s, i) => (st[s] = perSharer[i]));
+        const rows = buildRows(all, st, sharers);
+        setOverall(Object.fromEntries(rows.map((r) => [r.sharer, { subscriptions: r.subscriptions, disputes: r.disputes, refunds: r.refunds }])));
+      })
       .catch(() => {});
     return () => {
       cancelled = true;
@@ -53,7 +64,7 @@ export function FeedPosts({ posts }: { posts: FeedPost[] }) {
       <SearchBar value={tools.query} onChange={tools.setQuery} placeholder="Search by topic, strategy or sharer name" />
       {tools.searching && tools.filtered.length === 0 && <p className="muted">No strategies match “{tools.query.trim()}”.</p>}
       {tools.paged.slice.map((p) => (
-        <Post key={p.id} post={p} n={stats?.[p.id]} />
+        <Post key={p.id} post={p} n={stats?.[p.id]} overall={overall?.[p.sharer]} />
       ))}
       <PaginationSummary paged={tools.paged} noun={tools.paged.total === 1 ? "strategy" : "strategies"} onPage={tools.setPage} />
     </>
@@ -91,8 +102,9 @@ function Gauge({ score }: { score: ReturnType<typeof reputation> | null }) {
   );
 }
 
-function Post({ post, n }: { post: FeedPost; n?: Numbers }) {
-  const rep = n ? reputation(n) : null;
+function Post({ post, n, overall }: { post: FeedPost; n?: Numbers; overall?: Numbers }) {
+  // Only the reputation gauge uses the sharer's overall numbers; the three chips below are for this post alone.
+  const rep = overall ? reputation(overall) : null;
   const v = (x?: number) => (n ? String(x) : "–");
   return (
     <article className="post">

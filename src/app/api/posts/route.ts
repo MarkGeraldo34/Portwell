@@ -8,7 +8,7 @@ import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { listSubscriptionsFor } from "@/lib/contract";
 import { postLocked } from "@/lib/delete-rules";
 import { realDeps } from "@/server/access";
-import { blobConfigured, blobProblem, deletePost, listCards, savePost } from "@/server/blob-store";
+import { blobConfigured, blobProblem, deletePost, getXVerified, listCards, savePost } from "@/server/blob-store";
 
 export const maxDuration = 60; // the AI review can take a while
 
@@ -41,6 +41,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Could not verify your wallet right now. Try again." }, { status: 503 });
   }
   if (!proof.ok) return NextResponse.json({ error: proof.error }, { status: proof.status });
+
+  // 2b. The X handle on the post must be one this wallet has proven it owns (tweet challenge).
+  if (blobConfigured()) {
+    const xv = await getXVerified(proof.accountId);
+    if (!xv || xv.handle.toLowerCase() !== post.xHandle.toLowerCase()) {
+      return NextResponse.json({ error: `Verify @${post.xHandle} first: get your code, tweet it from that account and paste the link. Anyone can type a handle, so the site checks it.` }, { status: 403 });
+    }
+  }
 
   // 3. The scam review is mandatory: rules plus AI. If the AI cannot run, nothing is published.
   const input: RiskInput = {

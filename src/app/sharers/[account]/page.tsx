@@ -35,6 +35,7 @@ export default async function SharerPage({ params, searchParams }: { params: Pro
     summary: c.summary,
     risk: c.risk,
     capitalNeededNear: c.capitalNeededNear,
+    duration: c.duration ?? null,
     steps: c.steps,
     verdict: "ok" as const,
   }));

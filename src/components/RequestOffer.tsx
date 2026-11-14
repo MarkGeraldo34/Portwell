@@ -11,7 +11,7 @@ import { formatDuration } from "@/lib/duration";
 import { mailLink } from "@/lib/mail-link";
 
 /** The subscribe card. The learner pays their own budget, never the sharer's saved price. */
-function BudgetSubscribe({ req, sharer }: { req: RequestPost; sharer: string }) {
+function BudgetSubscribe({ req, sharer, offerTs }: { req: RequestPost; sharer: string; offerTs: number }) {
   const { accountId, signIn, call } = useWallet();
   const [subscribed, setSubscribed] = useState(false);
   const [sending, setSending] = useState(false);
@@ -24,12 +24,14 @@ function BudgetSubscribe({ req, sharer }: { req: RequestPost; sharer: string }) 
     if (!accountId || accountId !== req.learner) return;
     let live = true;
     listSubscriptionsFor(accountId)
-      .then((subs) => live && setSubscribed(subs.some((x) => x.learner === accountId && x.sharer === sharer && x.status === "Active")))
+      // Only a subscription that started after this offer counts as this request's. An older one (for example from a
+      // post you subscribed to earlier) must not make this button say "Subscribed".
+      .then((subs) => live && setSubscribed(subs.some((x) => x.learner === accountId && x.sharer === sharer && x.status === "Active" && Number(BigInt(x.start_ns) / 1_000_000n) >= offerTs)))
       .catch(() => {});
     return () => {
       live = false;
     };
-  }, [accountId, req.learner, sharer]);
+  }, [accountId, req.learner, sharer, offerTs]);
 
   async function subscribe() {
     if (sending || subscribed) return;
@@ -164,7 +166,7 @@ export function RequestOffer({ learner, id, sharer }: { learner: string; id: str
         </ul>
       </section>
 
-      <BudgetSubscribe req={req} sharer={sharer} />
+      <BudgetSubscribe req={req} sharer={sharer} offerTs={offer.ts} />
     </>
   );
 }

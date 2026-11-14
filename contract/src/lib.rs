@@ -15,6 +15,9 @@ const TRANCHES: u64 = 4;
 const FEE_BPS: u128 = 200;
 /// Minimum monthly price: 0.1 NEAR. Discourages self-dealing and dust spam.
 const MIN_PRICE: u128 = 100_000_000_000_000_000_000_000;
+/// Kept by the contract when a sharer approves a learner's budget (0.003 NEAR). It pays for the storage of the
+/// approval so spam cannot eat into escrowed funds. Anything attached above it is refunded.
+const ACCEPT_FEE: u128 = 3_000_000_000_000_000_000_000;
 
 #[derive(BorshStorageKey)]
 #[near(serializers = [borsh])]
@@ -99,6 +102,15 @@ fn pay(to: &AccountId, amount: u128) {
     }
 }
 
+/// Raw storage key for an approved budget. Kept outside the contract struct so adding it needs no state migration.
+fn offer_key(sharer: &AccountId, learner: &AccountId) -> Vec<u8> {
+    format!("ob:{}|{}", sharer, learner).into_bytes()
+}
+
+fn read_amount(bytes: Option<Vec<u8>>) -> Option<u128> {
+    bytes.and_then(|b| <[u8; 16]>::try_from(b.as_slice()).ok()).map(u128::from_le_bytes)
+}
+
 /// Cumulative amount owed to the sharer once `k` tranches have matured.
 fn cumulative_due(total: u128, k: u64) -> u128 {
     total * (k as u128) / (TRANCHES as u128)
@@ -142,7 +154,50 @@ impl Contract {
             env::attached_deposit().as_yoctonear() == price,
             "attach exactly the sharer's monthly price"
         );
+        self.create_subscription(learner, sharer, price)
+    }
 
+    /// Sharer approves one learner's budget (yoctoNEAR) for one request. This is the sharer's on-chain consent to be
+    /// paid exactly that amount by that learner; their saved monthly price is not involved. Attach at least
+    /// ACCEPT_FEE (the contract keeps it for storage; any excess is refunded). Approving again replaces the amount.
+    #[payable]
+    pub fn accept_budget(&mut self, learner: AccountId, amount: U128) {
+        let sharer = env::predecessor_account_id();
+        require!(learner != sharer, "cannot accept your own budget");
+        require!(amount.0 >= MIN_PRICE, "budget below minimum (0.1 NEAR)");
+        let attached = env::attached_deposit().as_yoctonear();
+        require!(attached >= ACCEPT_FEE, "attach at least 0.003 NEAR to cover storage");
+        env::storage_write(&offer_key(&sharer, &learner), &amount.0.to_le_bytes());
+        pay(&sharer, attached - ACCEPT_FEE);
+    }
+
+    /// Sharer withdraws an approval they gave (for example before the learner has subscribed).
+    pub fn withdraw_budget(&mut self, learner: AccountId) {
+        let sharer = env::predecessor_account_id();
+        require!(
+            env::storage_remove(&offer_key(&sharer, &learner)),
+            "no approved budget for this learner"
+        );
+    }
+
+    /// Learner subscribes at the budget the sharer approved. Attached deposit must equal that amount exactly.
+    /// The approval is single use.
+    #[payable]
+    pub fn subscribe_offer(&mut self, sharer: AccountId) -> U64 {
+        let learner = env::predecessor_account_id();
+        require!(learner != sharer, "cannot subscribe to yourself");
+        let key = offer_key(&sharer, &learner);
+        let amount = read_amount(env::storage_read(&key))
+            .unwrap_or_else(|| env::panic_str("the sharer has not approved a budget for you"));
+        require!(
+            env::attached_deposit().as_yoctonear() == amount,
+            "attach exactly the budget the sharer approved"
+        );
+        env::storage_remove(&key);
+        self.create_subscription(learner, sharer, amount)
+    }
+
+    fn create_subscription(&mut self, learner: AccountId, sharer: AccountId, price: u128) -> U64 {
         let id = self.next_id;
         self.next_id += 1;
         self.subs.insert(
@@ -269,6 +324,11 @@ impl Contract {
 
     pub fn get_price(&self, sharer: AccountId) -> Option<U128> {
         self.prices.get(&sharer).map(|p| U128(*p))
+    }
+
+    /// The budget this sharer approved for this learner, if any.
+    pub fn get_accepted_budget(&self, sharer: AccountId, learner: AccountId) -> Option<U128> {
+        read_amount(env::storage_read(&offer_key(&sharer, &learner))).map(U128)
     }
 
     pub fn get_subscription(&self, id: u64) -> Option<SubscriptionView> {
@@ -438,5 +498,114 @@ mod tests {
         c.dispute(id);
         ctx(learner, 0, 0);
         c.resolve_dispute(id, true);
+    }
+
+    // ---- approved budgets (a learner pays their own budget, not the sharer's saved price) ----
+
+    const BUDGET: u128 = 2 * MIN_PRICE; // 0.2 NEAR, different from the sharer's 0.4 NEAR price
+
+    fn accept(c: &mut Contract, sharer: &AccountId, learner: &AccountId, amount: u128, deposit: u128) {
+        ctx(sharer.clone(), deposit, 0);
+        c.accept_budget(learner.clone(), U128(amount));
+    }
+
+    #[test]
+    fn learner_pays_the_approved_budget_not_the_price() {
+        let (mut c, _, sharer, learner) = setup();
+        accept(&mut c, &sharer, &learner, BUDGET, ACCEPT_FEE);
+        assert_eq!(c.get_accepted_budget(sharer.clone(), learner.clone()).unwrap().0, BUDGET);
+        ctx(learner.clone(), BUDGET, 0);
+        let id = c.subscribe_offer(sharer.clone()).0;
+        let s = c.get_subscription(id).unwrap();
+        assert_eq!(s.total.0, BUDGET);
+        assert_eq!(s.status, Status::Active);
+        assert_eq!(c.get_sharer_stats(sharer.clone()).subscriptions, 1);
+        // single use
+        assert!(c.get_accepted_budget(sharer, learner).is_none());
+    }
+
+    #[test]
+    fn approved_budget_still_releases_weekly() {
+        let (mut c, _, sharer, learner) = setup();
+        accept(&mut c, &sharer, &learner, BUDGET, ACCEPT_FEE);
+        ctx(learner.clone(), BUDGET, 0);
+        let id = c.subscribe_offer(sharer.clone()).0;
+        ctx(learner.clone(), 0, 4 * WEEK_NS);
+        assert_eq!(c.release_due(id).0, BUDGET);
+        assert_eq!(c.get_subscription(id).unwrap().status, Status::Completed);
+    }
+
+    #[test]
+    #[should_panic(expected = "attach exactly the budget the sharer approved")]
+    fn wrong_amount_is_rejected() {
+        let (mut c, _, sharer, learner) = setup();
+        accept(&mut c, &sharer, &learner, BUDGET, ACCEPT_FEE);
+        ctx(learner, PRICE, 0); // the sharer's saved price is not what was approved
+        c.subscribe_offer(sharer);
+    }
+
+    #[test]
+    #[should_panic(expected = "the sharer has not approved a budget for you")]
+    fn no_approval_means_no_subscription() {
+        let (mut c, _, sharer, learner) = setup();
+        ctx(learner, BUDGET, 0);
+        c.subscribe_offer(sharer);
+    }
+
+    #[test]
+    #[should_panic(expected = "the sharer has not approved a budget for you")]
+    fn approval_is_for_one_learner_only() {
+        let (mut c, _, sharer, learner) = setup();
+        accept(&mut c, &sharer, &learner, BUDGET, ACCEPT_FEE);
+        ctx(accounts(3), BUDGET, 0);
+        c.subscribe_offer(sharer);
+    }
+
+    #[test]
+    #[should_panic(expected = "the sharer has not approved a budget for you")]
+    fn approval_is_single_use() {
+        let (mut c, _, sharer, learner) = setup();
+        accept(&mut c, &sharer, &learner, BUDGET, ACCEPT_FEE);
+        ctx(learner.clone(), BUDGET, 0);
+        c.subscribe_offer(sharer.clone());
+        ctx(learner, BUDGET, 0);
+        c.subscribe_offer(sharer);
+    }
+
+    #[test]
+    #[should_panic(expected = "attach at least 0.003 NEAR to cover storage")]
+    fn approval_needs_the_storage_fee() {
+        let (mut c, _, sharer, learner) = setup();
+        accept(&mut c, &sharer, &learner, BUDGET, 0);
+    }
+
+    #[test]
+    #[should_panic(expected = "budget below minimum")]
+    fn approval_below_minimum_is_rejected() {
+        let (mut c, _, sharer, learner) = setup();
+        accept(&mut c, &sharer, &learner, MIN_PRICE - 1, ACCEPT_FEE);
+    }
+
+    #[test]
+    #[should_panic(expected = "cannot accept your own budget")]
+    fn sharer_cannot_approve_themselves() {
+        let (mut c, _, sharer, _) = setup();
+        accept(&mut c, &sharer, &sharer.clone(), BUDGET, ACCEPT_FEE);
+    }
+
+    #[test]
+    fn sharer_can_withdraw_an_approval() {
+        let (mut c, _, sharer, learner) = setup();
+        accept(&mut c, &sharer, &learner, BUDGET, ACCEPT_FEE);
+        ctx(sharer.clone(), 0, 0);
+        c.withdraw_budget(learner.clone());
+        assert!(c.get_accepted_budget(sharer, learner).is_none());
+    }
+
+    #[test]
+    fn normal_subscribe_is_unchanged() {
+        let (mut c, _, sharer, learner) = setup();
+        let id = subscribe(&mut c, &learner, &sharer);
+        assert_eq!(c.get_subscription(id).unwrap().total.0, PRICE);
     }
 }

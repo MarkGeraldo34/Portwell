@@ -275,3 +275,38 @@ export async function xHandleOwner(handle: string): Promise<string | null> {
 export async function saveXVerified(account: string, v: XVerified): Promise<void> {
   await put(xPath(account), JSON.stringify(v), { access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 60, token: blobToken() });
 }
+
+const incomingCache = new Map<string, { at: number; v: { from: string; ts: number }[] }>();
+
+/**
+ * Who has written to this account in chat, and when (newest message per conversation, only if the other person
+ * sent it). Metadata only, read from file names: message text is never touched. Used for the unread badges.
+ */
+export async function chatIncoming(account: string): Promise<{ from: string; ts: number }[]> {
+  if (!/^[a-z0-9._-]{2,64}$/.test(account) || !blobConfigured()) return [];
+  const hit = incomingCache.get(account);
+  if (hit && Date.now() - hit.at < 15_000) return hit.v;
+  const latest = new Map<string, { ts: number; mine: boolean }>();
+  let cursor: string | undefined;
+  let seen = 0;
+  do {
+    const page = await list({ prefix: "chat/", limit: 1000, cursor, token: blobToken() });
+    seen += page.blobs.length;
+    for (const b of page.blobs) {
+      const [root, sharer, learner, file] = b.pathname.split("/");
+      if (root !== "chat" || !file || (sharer !== account && learner !== account)) continue;
+      const [tsText, who] = file.split("-");
+      const ts = Number(tsText);
+      if (!Number.isFinite(ts)) continue;
+      const iAmSharer = sharer === account;
+      const mine = (who === "s") === iAmSharer;
+      const other = iAmSharer ? learner : sharer;
+      const prev = latest.get(other);
+      if (!prev || ts > prev.ts) latest.set(other, { ts, mine });
+    }
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor && seen < 5000);
+  const v = Array.from(latest, ([from, m]) => ({ from, ts: m.ts, mine: m.mine })).filter((m) => !m.mine).map(({ from, ts }) => ({ from, ts }));
+  incomingCache.set(account, { at: Date.now(), v });
+  return v;
+}

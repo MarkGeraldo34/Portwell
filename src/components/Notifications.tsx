@@ -8,11 +8,13 @@ import { useWallet } from "./WalletProvider";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { formatNear, getOwner, listSubscriptionsFor } from "@/lib/contract";
 import { loadBoard } from "@/lib/social";
+import { fetchChatIncoming } from "@/lib/chat-activity";
 import { buildNotifications, type Note, type NoteKind } from "@/lib/notifications";
 
 const FILTERS: { id: "all" | NoteKind; label: string }[] = [
   { id: "all", label: "All" },
   { id: "offer", label: "Offers" },
+  { id: "chat", label: "Chats" },
   { id: "subscription", label: "Subscriptions" },
   { id: "refund", label: "Refunds" },
   { id: "dispute", label: "Disputes" },
@@ -22,6 +24,7 @@ const ICON: Record<NoteKind, string> = {
   offer: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
   subscription: "M20 12V8H6a2 2 0 0 1 0-4h12v4M4 6v12a2 2 0 0 0 2 2h14v-4M18 12a2 2 0 0 0 0 4h4v-4z",
   refund: "M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5",
+  chat: "M21 11.5a8.4 8.4 0 0 1-9 8.4 8.5 8.5 0 0 1-3.8-.9L3 21l2-5.2a8.4 8.4 0 0 1-.9-3.8A8.5 8.5 0 0 1 12.5 3 8.4 8.4 0 0 1 21 11.5z",
   dispute: "M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0zM12 9v4M12 17h.01",
 };
 
@@ -48,9 +51,10 @@ export function Notifications() {
     try {
       const owner = CONTRACT_CONFIGURED ? await getOwner().catch(() => null) : null;
       const isOwner = owner === accountId;
-      const [subs, board] = await Promise.all([
+      const [subs, board, chats] = await Promise.all([
         CONTRACT_CONFIGURED ? listSubscriptionsFor(accountId, { includeAll: isOwner }) : Promise.resolve([]),
         loadBoard(50).catch(() => []),
+        fetchChatIncoming(accountId),
       ]);
       setNotes(
         buildNotifications(
@@ -59,6 +63,7 @@ export function Notifications() {
           board.map(({ request, offers }) => ({ request, offers })),
           isOwner,
           (y) => formatNear(y, 2),
+          chats,
         ),
       );
     } catch (e) {

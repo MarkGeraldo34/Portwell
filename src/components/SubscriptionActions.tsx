@@ -3,7 +3,10 @@
 import { useCallback, useEffect, useState } from "react";
 import { AccountLink } from "./AccountLink";
 import { PaginationSummary, SearchBar } from "./ListTools";
+import Link from "next/link";
 import { paginate } from "@/lib/list-tools";
+import { loadBoard } from "@/lib/social";
+import { pickSource, type SourceBoardItem, type SourcePost, type SubSource } from "@/lib/sub-source";
 import { UpdatesMeter } from "./Updates";
 import { ChatBox } from "./ChatBox";
 import { useWallet } from "./WalletProvider";
@@ -37,18 +40,29 @@ function Row({
   me,
   isOwner,
   onAct,
+  source,
 }: {
   sub: SubscriptionView;
   me: string;
   isOwner: boolean;
   onAct: (a: Act, id: string) => void;
+  source?: SubSource | null;
 }) {
   const isLearner = sub.learner === me;
   const open = sub.status === "Active";
   return (
     <div className={`card sub-card${open ? " is-active" : " is-settled"}`}>
       <div className="sub-head">
-        <strong>Subscription #{sub.id}</strong>
+        <div className="sub-title">
+          <strong>Subscription #{sub.id}</strong>
+          {source && (
+            <Link className={`sub-source ${source.kind}`} href={source.href} title={`Open the ${source.kind === "post" ? "post" : "request"}: ${source.title}`}>
+              <span className="sub-source-kind">{source.kind === "post" ? "Post" : "Request"}</span>
+              <span className="sub-source-name">{source.title}</span>
+              <span aria-hidden="true" className="sub-source-go">↗</span>
+            </Link>
+          )}
+        </div>
         <span className={`tag status-${sub.status.toLowerCase()}`}>{sub.status}</span>
       </div>
       <p className="sub-parties">
@@ -128,6 +142,8 @@ export function SubscriptionActions() {
   const [page, setPage] = useState(1);
   const [byId, setById] = useState<SubscriptionView | null>(null); // a subscription found by id that is not in your list
 
+  const [sources, setSources] = useState<{ posts: SourcePost[]; board: SourceBoardItem[] }>({ posts: [], board: [] });
+
   const refresh = useCallback(async () => {
     if (!accountId) return;
     setLoading(true);
@@ -146,6 +162,30 @@ export function SubscriptionActions() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  // Titles for the cards: the sharers' public posts and the request board. Best effort; cards work without them.
+  const sharerKey = (subs ?? []).map((s) => s.sharer).filter((v, i, a) => a.indexOf(v) === i).sort().join(",");
+  useEffect(() => {
+    if (!sharerKey) return;
+    let live = true;
+    void (async () => {
+      const [lists, board] = await Promise.all([
+        Promise.all(
+          sharerKey.split(",").map((sh) =>
+            fetch(`/api/posts?sharer=${encodeURIComponent(sh)}&cards=1`)
+              .then((r) => r.json())
+              .then((j: { cards?: SourcePost[] }) => (j.cards ?? []).map((c) => ({ id: c.id, sharer: c.sharer, title: c.title, ts: Number(c.ts) || 0 })))
+              .catch(() => [] as SourcePost[]),
+          ),
+        ),
+        loadBoard(50).catch(() => []),
+      ]);
+      if (live) setSources({ posts: lists.flat(), board: board.map(({ request, offers }) => ({ request, offers })) });
+    })();
+    return () => {
+      live = false;
+    };
+  }, [sharerKey]);
 
   const q = query.trim().toLowerCase();
   useEffect(() => {
@@ -185,7 +225,7 @@ export function SubscriptionActions() {
   const found = (subs ?? []).filter(matches);
   if (byId && !found.some((x) => x.id === byId.id)) found.unshift(byId);
   const isOwner = owner === accountId;
-  const card = (x: SubscriptionView) => <Row key={x.id} sub={x} me={accountId} isOwner={isOwner} onAct={(a, id) => void act(a, id)} />;
+  const card = (x: SubscriptionView) => <Row key={x.id} sub={x} me={accountId} isOwner={isOwner} onAct={(a, id) => void act(a, id)} source={pickSource({ sharer: x.sharer, learner: x.learner, startMs: Math.floor(Number(BigInt(x.start_ns) / 1_000_000n)) }, sources.posts, sources.board)} />;
 
   // Cards are grouped by your role: tutor (you are the sharer and can claim matured weeks) or learner (you paid).
   const groups: { key: string; title: string; hint: string; mine: (x: SubscriptionView) => boolean }[] = [

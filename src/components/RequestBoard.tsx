@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
 import { SOCIAL_CONTRACT, STORAGE_DEPOSIT, loadBoard } from "@/lib/social";
+import { CONTRACT_CONFIGURED, CONTRACT_ID } from "@/lib/config";
+import { ACCEPT_FEE_YOCTO, parseNear } from "@/lib/contract";
 import { LIMITS, buildOfferSet, buildRequestSet, validateOffer, validateRequest, type OfferPost, type RequestPost } from "@/lib/social-format";
 import { scanPost } from "@/lib/risk";
 import { requireAiApproval } from "@/lib/ai-gate";
@@ -30,7 +32,7 @@ const ago = (ts: number) => {
 };
 
 export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "mine"; emails?: Record<string, string> }) {
-  const { accountId, signIn, callTo } = useWallet();
+  const { accountId, signIn, callTo, callBatch } = useWallet();
   const [cards, setCards] = useState<Card[] | null>(null);
   const [loadErr, setLoadErr] = useState("");
   const [form, setForm] = useState({ title: "", details: "", budget: "1", durationN: "1", durationUnit: "months" });
@@ -110,7 +112,12 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
         if (blocked) return setMsg(blocked, true);
       }
       setMsg("Waiting for wallet approval.");
-      await callTo(SOCIAL_CONTRACT, "set", buildOfferSet(accountId, c.req.learner, c.req.id, v.value), STORAGE_DEPOSIT);
+      // One approval does two things: it tells the escrow contract you accept this learner's budget (so they can pay
+      // exactly that, whatever your own saved price is), and it posts the offer. The only cost besides gas is a
+      // 0.003 NEAR storage fee kept by the escrow contract.
+      const calls: { receiverId: string; method: string; args: object; deposit?: bigint }[] = [{ receiverId: SOCIAL_CONTRACT, method: "set", args: buildOfferSet(accountId, c.req.learner, c.req.id, v.value), deposit: STORAGE_DEPOSIT }];
+      if (CONTRACT_CONFIGURED) calls.unshift({ receiverId: CONTRACT_ID, method: "accept_budget", args: { learner: c.req.learner, amount: parseNear(String(c.req.budget)).toString() }, deposit: ACCEPT_FEE_YOCTO });
+      await callBatch(calls);
       setOffering(null);
       setNote("");
       setOfferEmail("");

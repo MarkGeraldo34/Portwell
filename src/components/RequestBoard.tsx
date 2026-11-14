@@ -3,8 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
-import { CONTRACT_CONFIGURED } from "@/lib/config";
-import { formatNear, getPrice } from "@/lib/contract";
 import { SOCIAL_CONTRACT, STORAGE_DEPOSIT, loadBoard } from "@/lib/social";
 import { LIMITS, buildOfferSet, buildRequestSet, validateOffer, validateRequest, type OfferPost, type RequestPost } from "@/lib/social-format";
 import { scanPost } from "@/lib/risk";
@@ -18,7 +16,7 @@ import { formatDuration } from "@/lib/duration";
 
 interface Card {
   req: RequestPost;
-  offers: (OfferPost & { price: number | null })[];
+  offers: OfferPost[];
 }
 
 const short = (a: string) => (a.length > 26 ? `${a.slice(0, 12)}…${a.slice(-10)}` : a);
@@ -54,18 +52,8 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
     setLoadErr("");
     try {
       const board = await loadBoard(30);
-      const withOffers = await Promise.all(
-        board.map(async ({ request: req, offers }) => {
-          // Only people who have set a price in the escrow contract can actually be paid.
-          const priced = await Promise.all(
-            offers.map(async (o) => {
-              const p = CONTRACT_CONFIGURED ? await getPrice(o.sharer).catch(() => null) : null;
-              return { ...o, price: p ? Number(formatNear(p, 4)) : null };
-            }),
-          );
-          return { req, offers: priced.filter((o) => o.price !== null) };
-        }),
-      );
+      // Offers carry no price: the learner pays their own budget, never a price from the sharer's other posts.
+      const withOffers: Card[] = board.map(({ request: req, offers }) => ({ req, offers }));
       setCards(withOffers);
       const sharers = Array.from(new Set(withOffers.flatMap((c) => c.offers.map((o) => o.sharer)))).slice(0, 60);
       if (sharers.length) {
@@ -220,17 +208,11 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                     <span className="offer-who"><AccountLink account={o.sharer} /></span>
                     {mine ? (
                       <>
-                        <span className={o.price === c.req.budget ? "offer-says" : "offer-says warn"}>
-                          {o.price === c.req.budget
-                            ? "has accepted your budget and offered to teach you"
-                            : `offered to teach you at their price of ${o.price} NEAR (your budget is ${c.req.budget} NEAR)`}
-                        </span>
-                        <Link className="btn offer-sub" href={`/sharers/${o.sharer}`}>View and subscribe</Link>
+                        <span className="offer-says">has accepted your budget and offered to teach you</span>
+                        <Link className="btn offer-sub" href={`/requests/${encodeURIComponent(c.req.learner)}/${c.req.id}?sharer=${encodeURIComponent(o.sharer)}`}>View and subscribe</Link>
                       </>
                     ) : (
-                      <span className={`chip${o.price === c.req.budget ? "" : " warn"}`}>
-                        {o.price} NEAR / 30 days {o.price === c.req.budget ? "· matches the budget" : `· the budget is ${c.req.budget} NEAR`}
-                      </span>
+                      <span className="chip">offered to teach at the {c.req.budget} NEAR budget</span>
                     )}
                     {xmap[o.sharer] ? (
                       <a className="contact-btn" href={`https://x.com/${encodeURIComponent(xmap[o.sharer])}`} target="_blank" rel="noopener noreferrer nofollow" title={`@${xmap[o.sharer]} on X, verified`} aria-label={`@${xmap[o.sharer]} on X, verified`}>

@@ -116,7 +116,7 @@ export function Notifications() {
               <span className="note-body">
                 <b><Linkify text={n.title} /></b>
                 <span><Linkify text={n.detail} /></span>
-                {n.href && <Link className="note-open" href={n.href}>Open →</Link>}
+                {n.href && <Link className="note-open" href={n.href}>{n.kind === "offer" ? "View and subscribe" : "Open →"}</Link>}
               </span>
               <span className="note-time">{ago(n.ts)}</span>
             </>

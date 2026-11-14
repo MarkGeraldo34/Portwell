@@ -7,6 +7,7 @@ import { useWallet } from "./WalletProvider";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { getOwner, listSubscriptionsFor, formatNear } from "@/lib/contract";
 import { loadBoard } from "@/lib/social";
+import { fetchChatIncoming } from "@/lib/chat-activity";
 import { buildNotifications } from "@/lib/notifications";
 import { badgeText, countNewer, type BadgeKey } from "@/lib/unread";
 
@@ -141,11 +142,12 @@ function useBadges(path: string) {
     try {
       const owner = CONTRACT_CONFIGURED ? await getOwner().catch(() => null) : null;
       const isOwner = owner === accountId;
-      const [subs, board] = await Promise.all([
+      const [subs, board, chats] = await Promise.all([
         CONTRACT_CONFIGURED ? listSubscriptionsFor(accountId, { includeAll: isOwner }).catch(() => []) : Promise.resolve([]),
         loadBoard(50).catch(() => []),
+        fetchChatIncoming(accountId),
       ]);
-      const notes = buildNotifications(accountId, subs, board.map(({ request, offers }) => ({ request, offers })), isOwner, (y) => formatNear(y, 2));
+      const notes = buildNotifications(accountId, subs, board.map(({ request, offers }) => ({ request, offers })), isOwner, (y) => formatNear(y, 2), chats);
       // First visit: everything personal counts as new, but old public requests do not.
       let reqSeen = readSeen(accountId, "requests");
       if (reqSeen === null) {

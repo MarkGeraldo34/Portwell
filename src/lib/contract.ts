@@ -62,6 +62,11 @@ class ContractCallError extends Error {}
 
 export const getPrice = (sharer: string) => view<string | null>("get_price", { sharer });
 export const getStats = (sharer: string) => view<SharerStats>("get_sharer_stats", { sharer });
+/** What the sharer approved this learner to pay (yoctoNEAR), or null. Also null if the contract predates approvals. */
+export const getAcceptedBudget = (sharer: string, learner: string) =>
+  view<string | null>("get_accepted_budget", { sharer, learner }).catch(() => null);
+/** Kept by the contract when a sharer approves a budget (0.003 NEAR), to pay for storing the approval. */
+export const ACCEPT_FEE_YOCTO = 3n * 10n ** 21n;
 export const getOwner = () => view<string>("get_owner");
 export const getSubscription = (id: number) =>
   view<SubscriptionView | null>("get_subscription", { id });

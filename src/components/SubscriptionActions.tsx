@@ -184,11 +184,20 @@ export function SubscriptionActions() {
   const matches = (x: SubscriptionView) => !q || x.id === q || x.sharer.toLowerCase().includes(q) || x.learner.toLowerCase().includes(q);
   const found = (subs ?? []).filter(matches);
   if (byId && !found.some((x) => x.id === byId.id)) found.unshift(byId);
-  const active = found.filter((x) => x.status === "Active");
-  const inactive = found.filter((x) => x.status !== "Active");
-  const activePaged = paginate(active, page, 5);
   const isOwner = owner === accountId;
   const card = (x: SubscriptionView) => <Row key={x.id} sub={x} me={accountId} isOwner={isOwner} onAct={(a, id) => void act(a, id)} />;
+
+  // Cards are grouped by your role: tutor (you are the sharer and can claim matured weeks) or learner (you paid).
+  const groups: { key: string; title: string; hint: string; mine: (x: SubscriptionView) => boolean }[] = [
+    { key: "tutor", title: "As Tutor", hint: "Learners paying you. Claim each matured week from its card.", mine: (x) => x.sharer === accountId },
+    { key: "learner", title: "As Learner", hint: "Tutors you pay. Refund or dispute from More actions.", mine: (x) => x.learner === accountId },
+    ...(isOwner ? [{ key: "other", title: "Other subscriptions", hint: "Between other accounts (you see these as the owner).", mine: (x: SubscriptionView) => x.sharer !== accountId && x.learner !== accountId }] : []),
+  ];
+  const keyOf = (x: SubscriptionView) => groups.find((g) => g.mine(x))?.key ?? "other";
+  // One pagination over active cards, tutor group first, then learner.
+  const activeAll = groups.flatMap((g) => found.filter((x) => x.status === "Active" && keyOf(x) === g.key));
+  const activePaged = paginate(activeAll, page, 5);
+  const inactiveCount = found.filter((x) => x.status !== "Active").length;
 
   return (
     <>
@@ -212,16 +221,34 @@ export function SubscriptionActions() {
         </div>
         {subs && subs.length === 0 && !q && <p className="muted">None found for this account yet. A new subscription can take a few seconds to appear, so press the refresh icon.</p>}
         {q && found.length === 0 && <p className="muted">No subscription matches “{query.trim()}”.</p>}
-        {activePaged.slice.map(card)}
-        {!q && subs && subs.length > 0 && active.length === 0 && <p className="muted">No active subscriptions.</p>}
-        {inactive.length > 0 && (
-          <details className="inactive-cards" open={!!q || (isOwner && inactive.some((x) => x.status === "Disputed"))}>
-            <summary>Inactive cards ({inactive.length})</summary>
-            <p className="muted" style={{ fontSize: 13, margin: "6px 0 0" }}>Resolved, disputed, cancelled (refunded) and fully paid subscriptions.</p>
-            {inactive.map(card)}
-          </details>
-        )}
-        {subs !== null && <PaginationSummary paged={activePaged} noun={activePaged.total === 1 ? "active subscription" : "active subscriptions"} onPage={setPage} note={`${inactive.length} inactive`} />}
+
+        {subs !== null && (found.length > 0 || !q) && subs.length > 0 &&
+          groups.map((g) => {
+            const all = found.filter((x) => keyOf(x) === g.key);
+            if (g.key === "other" && all.length === 0) return null;
+            if (q && all.length === 0) return null;
+            const shown = activePaged.slice.filter((x) => keyOf(x) === g.key);
+            const activeTotal = all.filter((x) => x.status === "Active").length;
+            const inactive = all.filter((x) => x.status !== "Active");
+            return (
+              <div className="sub-group" key={g.key}>
+                <h3 className="sub-group-title">
+                  {g.title} <span className="count-chip">{activeTotal}</span>
+                </h3>
+                <p className="muted sub-group-hint">{g.hint}</p>
+                {shown.map(card)}
+                {activeTotal === 0 && <p className="muted">No active subscriptions.</p>}
+                {inactive.length > 0 && (
+                  <details className="inactive-cards" open={!!q || (isOwner && inactive.some((x) => x.status === "Disputed"))}>
+                    <summary>Inactive cards ({inactive.length})</summary>
+                    <p className="muted" style={{ fontSize: 13, margin: "6px 0 0" }}>Resolved, disputed, cancelled (refunded) and fully paid subscriptions.</p>
+                    {inactive.map(card)}
+                  </details>
+                )}
+              </div>
+            );
+          })}
+        {subs !== null && <PaginationSummary paged={activePaged} noun={activePaged.total === 1 ? "active subscription" : "active subscriptions"} onPage={setPage} note={`${inactiveCount} inactive`} />}
       </section>
       {msg && <p role="status">{msg}</p>}
     </>

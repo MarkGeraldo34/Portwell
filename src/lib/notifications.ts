@@ -4,7 +4,7 @@ import { isRefund } from "./leaderboard.ts";
 // Events come from two places: the escrow contract (subscriptions, refunds, disputes) and Social DB (offers).
 // The contract keeps no event log, so subscription-based items are dated by when the subscription started.
 
-export type NoteKind = "offer" | "subscription" | "refund" | "dispute";
+export type NoteKind = "offer" | "subscription" | "refund" | "dispute" | "chat";
 
 export interface Note {
   id: string;
@@ -38,8 +38,21 @@ export function buildNotifications(
   board: RequestOffers[],
   isOwner: boolean,
   fmt: (yocto: bigint) => string,
+  chats: { from: string; ts: number }[] = [],
 ): Note[] {
   const out: Note[] = [];
+
+  // New chat messages: the newest one per conversation, written by the other person.
+  for (const c of chats) {
+    out.push({
+      id: `chat-${c.from}`,
+      kind: "chat",
+      ts: c.ts,
+      title: `New message from ${c.from}`,
+      detail: "Open My subscriptions to read and reply",
+      href: "/subscriptions",
+    });
+  }
 
   // Offers sharers made on requests I posted.
   for (const { request, offers } of board) {
@@ -51,7 +64,7 @@ export function buildNotifications(
         ts: o.ts,
         title: `${o.sharer} offered to teach you`,
         detail: `For your request “${request.title}”${o.note ? `: “${o.note}”` : ""}`,
-        href: `/sharers/${o.sharer}`,
+        href: `/requests/${encodeURIComponent(request.learner)}/${request.id}?sharer=${encodeURIComponent(o.sharer)}`,
       });
     }
   }

@@ -1,4 +1,5 @@
 import type { MediaItem } from "@/lib/post-format";
+import ScrollImageReveal from "./ScrollImageReveal";
 
 // Shows a post's images and videos. Plain links (for example a YouTube link) are shown as buttons.
 export function MediaGallery({ media }: { media: MediaItem[] }) {
@@ -9,7 +10,7 @@ export function MediaGallery({ media }: { media: MediaItem[] }) {
         m.kind === "image" ? (
           // eslint-disable-next-line @next/next/no-img-element
           <a key={m.url} href={m.url} target="_blank" rel="noopener noreferrer nofollow" className="media-item">
-            <img src={m.url} alt="Shared by the sharer" loading="lazy" referrerPolicy="no-referrer" />
+            <ScrollImageReveal src={m.url} alt="Shared by the sharer" mask="wipe" direction="left" parallax={16} className="sir-frame small" rounded="sir-round" />
           </a>
         ) : m.kind === "video" ? (
           <video key={m.url} className="media-item" src={m.url} controls preload="metadata" playsInline />

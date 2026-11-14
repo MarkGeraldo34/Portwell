@@ -21,6 +21,8 @@ interface WalletCtx {
   call: (method: string, args?: object, depositYocto?: bigint) => Promise<void>;
   /** Same as call, but to any contract (used for Social DB requests and offers). */
   callTo: (receiverId: string, method: string, args: object, depositYocto?: bigint) => Promise<void>;
+  /** Several function calls approved together (one wallet prompt): [receiver, method, args, deposit]. */
+  callBatch: (calls: { receiverId: string; method: string; args: object; deposit?: bigint }[]) => Promise<void>;
   /** Ask the wallet to sign a NEP-413 message, proving the user controls the account. */
   signMessage: (params: { message: string; recipient: string; nonce: Buffer }) => Promise<SignedMessage>;
 }
@@ -82,6 +84,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     [selector],
   );
 
+  const callBatch = useCallback(
+    async (calls: { receiverId: string; method: string; args: object; deposit?: bigint }[]) => {
+      if (!selector) throw new Error("Wallet not ready");
+      const wallet = await selector.wallet();
+      await wallet.signAndSendTransactions({
+        transactions: calls.map((c) => ({ receiverId: c.receiverId, actions: [actionCreators.functionCall(c.method, c.args, GAS, c.deposit ?? 0n)] })),
+      });
+    },
+    [selector],
+  );
+
   const signMessage = useCallback(
     async (params: { message: string; recipient: string; nonce: Buffer }) => {
       if (!selector) throw new Error("Wallet not ready");
@@ -95,7 +108,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <Ctx.Provider value={{ accountId, ready: !!selector, signIn: () => modal?.show(), signOut, call, callTo, signMessage }}>
+    <Ctx.Provider value={{ accountId, ready: !!selector, signIn: () => modal?.show(), signOut, call, callTo, callBatch, signMessage }}>
       {children}
     </Ctx.Provider>
   );

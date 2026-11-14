@@ -684,3 +684,12 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .icon-btn.has-badge { position: relative; }
 .icon-btn .count-badge { position: absolute; top: -5px; right: -6px; margin: 0; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; }
 .note-chat { color: #7fb0ff; }
+/* Site reputation tiles on the profile */
+.rep-tiles { flex: 1 0 100%; display: flex; gap: 12px; flex-wrap: wrap; margin-top: 4px; }
+.rep-tile { flex: 1 1 160px; padding: 12px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.03); display: flex; flex-direction: column; gap: 2px; }
+.rep-tile b { font-size: 26px; line-height: 1.1; color: #fff; }
+.rep-tile b small { font-size: 13px; font-weight: 600; color: var(--muted); }
+.rep-tile span { font-size: 13px; color: var(--muted); }
+.rep-tile.good { border-color: rgba(70,200,130,.45); }
+.rep-tile.mid { border-color: rgba(245,197,66,.5); }
+.rep-tile.low { border-color: rgba(217,47,84,.55); }

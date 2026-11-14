@@ -10,6 +10,7 @@ import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { getStats, listSubscriptionsFor } from "@/lib/contract";
 import { buildRows, type Row } from "@/lib/leaderboard";
 import { formatDuration } from "@/lib/duration";
+import { learnerActivity, learnerReputation, reputation, type Score } from "@/lib/reputation";
 
 interface Req {
   id: string;
@@ -23,6 +24,19 @@ interface Req {
 
 const day = (ts: number) => (ts ? new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "");
 
+const tone = (v: number) => (v >= 80 ? "good" : v >= 50 ? "mid" : "low");
+
+function RepTile({ label, score }: { label: string; score: Score | null }) {
+  const text = score === null ? "–" : score.kind === "new" ? "New" : `${score.value}`;
+  const cls = score?.kind === "scored" ? `rep-tile ${tone(score.value)}` : "rep-tile";
+  return (
+    <div className={cls} title="Site reputation, worked out from on-chain subscriptions, disputes and refunds">
+      <b>{text}{score?.kind === "scored" && <small> / 100</small>}</b>
+      <span>{label}</span>
+    </div>
+  );
+}
+
 /** Simple public profile: who this wallet is, what it shares, and what it asked for. */
 export function Profile({ account }: { account: string }) {
   const { accountId } = useWallet();
@@ -31,6 +45,8 @@ export function Profile({ account }: { account: string }) {
   const [requests, setRequests] = useState<Req[] | null>(null);
   const [copied, setCopied] = useState(false);
   const [overall, setOverall] = useState<Row | null>(null);
+  // Site reputation: as a sharer (needs sharer-side subscriptions) and as a learner. null while loading.
+  const [scores, setScores] = useState<{ sharer: Score; learner: Score } | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -42,9 +58,18 @@ export function Profile({ account }: { account: string }) {
       .catch(() => live && setShares([]));
     // The sharer's overall numbers (all their posts together) are shown here and on the leaderboard.
     setOverall(null);
+    setScores(null);
     if (CONTRACT_CONFIGURED) {
       Promise.all([listSubscriptionsFor(account), getStats(account).catch(() => null)])
-        .then(([subs, st]) => live && setOverall(buildRows(subs.filter((s) => s.sharer === account), { [account]: st }, [account])[0] ?? null))
+        .then(([subs, st]) => {
+          if (!live) return;
+          const row = buildRows(subs.filter((s) => s.sharer === account), { [account]: st }, [account])[0] ?? null;
+          setOverall(row);
+          setScores({
+            sharer: row ? reputation({ subscriptions: row.subscriptions, disputes: row.disputes, refunds: row.refunds }) : { kind: "new" },
+            learner: learnerReputation(learnerActivity(subs, account)),
+          });
+        })
         .catch(() => {});
     }
     loadBoard(50)
@@ -94,6 +119,10 @@ export function Profile({ account }: { account: string }) {
           </div>
         </div>
         <button className="btn ghost" onClick={() => void copy()}>{copied ? "Copied" : "Copy ID"}</button>
+        <div className="rep-tiles" aria-label="Site reputation">
+          <RepTile label="Reputation as sharer" score={scores?.sharer ?? null} />
+          <RepTile label="Reputation as learner" score={scores?.learner ?? null} />
+        </div>
       </section>
 
       <h2 className="board-title">Shares</h2>

@@ -1,107 +1,56 @@
-import { isRefund } from "./leaderboard.ts";
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { buildNotifications, type SubForNotes } from "./notifications.ts";
 
-// Pure builder for the notifications page (no network, easy to test).
-// Events come from two places: the escrow contract (subscriptions, refunds, disputes) and Social DB (offers).
-// The contract keeps no event log, so subscription-based items are dated by when the subscription started.
+const NEAR = 10n ** 24n;
+const fmt = (y: bigint) => String(Number(y / (NEAR / 100n)) / 100);
+const sub = (o: Partial<SubForNotes>): SubForNotes => ({
+  id: "0", learner: "ann.testnet", sharer: "sam.testnet", total: String(4n * NEAR), released: "0",
+  start_ns: String(1_000_000_000n * 1000n), status: "Active", ...o,
+});
 
-export type NoteKind = "offer" | "subscription" | "refund" | "dispute";
+test("sharer sees new subscriptions; learner sees their own", () => {
+  const subs = [sub({})];
+  assert.equal(buildNotifications("sam.testnet", subs, [], false, fmt)[0].title, "ann.testnet subscribed to you");
+  assert.equal(buildNotifications("ann.testnet", subs, [], false, fmt)[0].title, "You subscribed to sam.testnet");
+  assert.equal(buildNotifications("zed.testnet", subs, [], false, fmt).length, 0);
+});
 
-export interface Note {
-  id: string;
-  kind: NoteKind;
-  ts: number; // ms
-  title: string;
-  detail: string;
-  href?: string;
-}
+test("refund shows only unreleased amount; disputes show for the sharer", () => {
+  const subs = [
+    sub({ id: "1", status: "Cancelled", released: String(NEAR) }),
+    sub({ id: "2", status: "Disputed" }),
+  ];
+  const n = buildNotifications("ann.testnet", subs, [], false, fmt);
+  assert.ok(n.some((x) => x.kind === "refund" && x.title === "You were refunded 3 NEAR"));
+  const s = buildNotifications("sam.testnet", subs, [], false, fmt);
+  assert.ok(s.some((x) => x.kind === "dispute" && x.title === "ann.testnet opened a dispute against you"));
+});
 
-export interface SubForNotes {
-  id: string;
-  learner: string;
-  sharer: string;
-  total: string;
-  released: string;
-  start_ns: string;
-  status: string;
-}
+test("owner also sees other people's disputes and refunds, but not their subscriptions", () => {
+  const subs = [sub({ id: "3", status: "Disputed" }), sub({ id: "4", status: "Cancelled", released: "0" })];
+  const n = buildNotifications("0xb.testnet", subs, [], true, fmt);
+  assert.ok(n.some((x) => x.kind === "dispute" && x.detail.includes("Needs your decision")));
+  assert.ok(n.some((x) => x.kind === "refund"));
+  assert.equal(n.filter((x) => x.kind === "subscription").length, 0);
+});
 
-export interface RequestOffers {
-  request: { id: string; title: string; learner: string };
-  offers: { sharer: string; note: string; ts: number }[];
-}
+test("offers appear only for requests I posted", () => {
+  const board = [
+    { request: { id: "1", title: "Learn staking", learner: "ann.testnet" }, offers: [{ sharer: "sam.testnet", note: "hi", ts: 5 }] },
+    { request: { id: "2", title: "Other", learner: "bob.testnet" }, offers: [{ sharer: "sam.testnet", note: "", ts: 6 }] },
+  ];
+  const n = buildNotifications("ann.testnet", [], board, false, fmt);
+  assert.equal(n.length, 1);
+  assert.equal(n[0].title, "sam.testnet offered to teach you");
+  assert.equal(buildNotifications("sam.testnet", [], board, false, fmt).length, 0);
+});
 
-const startMs = (s: SubForNotes) => Math.floor(Number(BigInt(s.start_ns) / 1_000_000n));
-
-export function buildNotifications(
-  me: string,
-  subs: SubForNotes[],
-  board: RequestOffers[],
-  isOwner: boolean,
-  fmt: (yocto: bigint) => string,
-): Note[] {
-  const out: Note[] = [];
-
-  // Offers sharers made on requests I posted.
-  for (const { request, offers } of board) {
-    if (request.learner !== me) continue;
-    for (const o of offers) {
-      out.push({
-        id: `offer-${request.id}-${o.sharer}`,
-        kind: "offer",
-        ts: o.ts,
-        title: `${o.sharer} offered to teach you`,
-        detail: `For your request “${request.title}”${o.note ? `: “${o.note}”` : ""}`,
-        href: `/requests/${encodeURIComponent(request.learner)}/${request.id}?sharer=${encodeURIComponent(o.sharer)}`,
-      });
-    }
-  }
-
-  for (const s of subs) {
-    const mine = s.learner === me || s.sharer === me;
-    if (!mine && !isOwner) continue;
-    const ts = startMs(s);
-    const unreleased = BigInt(s.total) - BigInt(s.released);
-
-    if (mine) {
-      out.push({
-        id: `sub-${s.id}`,
-        kind: "subscription",
-        ts,
-        title: s.learner === me ? `You subscribed to ${s.sharer}` : `${s.learner} subscribed to you`,
-        detail: `${fmt(BigInt(s.total))} NEAR for 30 days, held in escrow`,
-        href: "/subscriptions",
-      });
-    }
-
-    if (isRefund(s)) {
-      out.push({
-        id: `refund-${s.id}`,
-        kind: "refund",
-        ts,
-        title: s.learner === me ? `You were refunded ${fmt(unreleased)} NEAR` : `${s.learner} was refunded ${fmt(unreleased)} NEAR`,
-        detail: `Subscription #${s.id} with ${s.sharer} was ${s.status === "Cancelled" ? "cancelled" : "resolved for the learner"}`,
-        href: "/subscriptions",
-      });
-    }
-
-    if (s.status === "Disputed" || s.status === "Resolved") {
-      const open = s.status === "Disputed";
-      const who = s.learner === me ? "You" : s.learner;
-      const against = s.sharer === me ? "you" : s.sharer;
-      out.push({
-        id: `dispute-${s.id}`,
-        kind: "dispute",
-        ts,
-        title: open ? `${who} opened a dispute against ${against}` : `Dispute settled: ${s.learner} vs ${s.sharer}`,
-        detail: open
-          ? isOwner && !mine
-            ? `Subscription #${s.id}. Needs your decision as contract owner.`
-            : `Subscription #${s.id}. Releases are paused until the owner decides.`
-          : `Subscription #${s.id} was resolved by the contract owner.`,
-        href: "/subscriptions",
-      });
-    }
-  }
-
-  return out.sort((a, b) => b.ts - a.ts || a.id.localeCompare(b.id));
-}
+test("chat messages from the other person become notifications", () => {
+  const n = buildNotifications("ann.testnet", [], [], false, fmt, [{ from: "sam.testnet", ts: 5000 }]);
+  assert.equal(n.length, 1);
+  assert.equal(n[0].kind, "chat");
+  assert.equal(n[0].title, "New message from sam.testnet");
+  assert.equal(n[0].href, "/subscriptions");
+  assert.equal(n[0].ts, 5000);
+});

@@ -664,3 +664,14 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .offer-says.warn { color: #ffb454; }
 .offers li .offer-sub { padding: 6px 14px; font-size: 13px; text-decoration: none; margin-left: 2px; }
 .offer-done { margin: 0; padding: 9px 14px; border-radius: 12px; font-size: 14px; line-height: 1.45; background: rgba(52,211,153,.1); border: 1px solid rgba(52,211,153,.45); }
+/* Request page reached from "View and subscribe" (RequestOffer.tsx) */
+.rq { display: grid; gap: 14px; max-width: 760px; }
+.rq-back { font-size: 13px; width: fit-content; }
+.rq-kicker { font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.rq-title { margin: 0; font-size: 30px; line-height: 1.15; }
+.rq-facts { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.rq-h { margin: 8px 0 0; font-size: 17px; }
+.rq-offer { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12); }
+.rq-pay { display: grid; gap: 10px; justify-items: start; padding: 16px; border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); }
+.rq-pay .pay-line { margin: 0; }
+.rq-note { margin: 0; font-size: 13px; line-height: 1.45; }

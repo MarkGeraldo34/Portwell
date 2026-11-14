@@ -2,7 +2,7 @@
 
 Built at NEAR HACKATHON (Nov 1-14, 2026). Tracks: `social`, `realworld`, `security`.
 
-- **Live demo (testnet):** https://portwell.vercel.app
+- **Live demo (testnet):** PASTE_YOUR_VERCEL_URL_HERE
 - **Escrow contract (testnet):** `portwell-v2-babyboi34.testnet` (owner and dispute resolver: `0xb.testnet`)
 - **License:** MIT
 
@@ -25,7 +25,8 @@ mandatory scam review keeps the obvious scams from being published at all.
 ## How NEAR is used
 
 - **Own Rust escrow contract** (`contract/`): holds learner payments, releases weekly, refunds on cancel, pauses
-  on dispute. Native NEAR transfers only. A subscription must be paid with exactly the sharer's price.
+  on dispute. Native NEAR transfers only. A subscription is paid exactly: the sharer's saved price, or, when a sharer
+  answers a learner's request, the learner's budget that the sharer approved on-chain (`accept_budget`).
 - **Wallet Selector** (Meteor, MyNearWallet): sign-in and all payments on testnet.
 - **NEP-413 signed messages:** a sharer proves they own their account to publish a post or upload media, and a
   subscriber proves it to unlock the steps of a strategy. Signing is free and sends no transaction.
@@ -57,8 +58,10 @@ You need two testnet accounts (create them in any NEAR testnet wallet; testnet N
    As the sharer, post a **weekly update** on the same post so the learner gets something for each remaining week.
 7. On **My subscriptions**, both sides can press **Chat** to ask and answer questions while the subscription is active.
 8. As the learner open **Request strategy**, post a request (with how many days or months and your budget), then as the
-   sharer open **All Requests**, verify your X handle and press **Offer to teach** (free, no payment). The learner
-   sees it under **My Requests** and in **Notifications**.
+   sharer open **All Requests**, verify your X handle and press **Offer to teach**. One wallet approval posts the offer and approves the learner's budget on-chain (gas plus a
+   0.003 NEAR storage fee kept by the contract; you are not paid or charged the budget). The learner
+   sees it under **My Requests** and in **Notifications**, presses **View and subscribe**, emails the sharer, and then
+   pays exactly their budget into escrow.
 9. A post or request can be deleted by its owner with **Delete** while nobody has a live subscription to it.
 
 ## Run it locally
@@ -129,8 +132,10 @@ Every strategy post is checked before it is published, and the check cannot be s
 - **The contract is open.** The scam review and the "post before you can offer" rules live in the web app; someone
   calling the contract directly can bypass them. Money safety (escrow, weekly release, refund, dispute) is enforced
   on-chain.
-- **One price per sharer.** The contract stores a single price for each sharer. The site refuses to let a learner
-  subscribe to a post whose capital needed differs from the sharer's current price.
+- **Two ways to pay.** A post subscription uses the sharer's one saved price, and the site refuses a post whose
+  capital needed differs from it. A request subscription uses the budget the sharer approved on-chain for that one
+  learner (single use). Either way the contract enforces the exact amount. An approved learner gets access to that
+  sharer's locked posts, because the contract has no post id.
 - **Offers are checked in the website only.** Offers to teach are written straight to NEAR Social DB by the sharer's
   wallet, so the X-handle check on offers cannot be enforced on-chain. Offers show a "Verified" or "Unverified X"
   tag so learners can tell. Publishing a post is enforced on the server.

@@ -4,36 +4,59 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
 import { AccountLink } from "./AccountLink";
-import { SubscribeProvider, useSubscribe } from "./SubscribePanel";
 import { loadBoard } from "@/lib/social";
+import { formatNear, getAcceptedBudget, listSubscriptionsFor, parseNear } from "@/lib/contract";
 import type { OfferPost, RequestPost } from "@/lib/social-format";
 import { formatDuration } from "@/lib/duration";
 import { mailLink } from "@/lib/mail-link";
 
-/** The subscribe card. It only ever talks about the learner's budget; the sharer's own saved price is never shown here. */
+/** The subscribe card. The learner pays their own budget, never the sharer's saved price. */
 function BudgetSubscribe({ req, sharer }: { req: RequestPost; sharer: string }) {
-  const sub = useSubscribe();
-  const { accountId, signIn } = useWallet();
-  if (!sub) return null;
+  const { accountId, signIn, call } = useWallet();
+  const [subscribed, setSubscribed] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [msg, setMsg] = useState("");
   const isLearner = accountId === req.learner;
   const dur = req.duration ? formatDuration(req.duration) : null;
+
+  useEffect(() => {
+    setSubscribed(false);
+    if (!accountId || accountId !== req.learner) return;
+    let live = true;
+    listSubscriptionsFor(accountId)
+      .then((subs) => live && setSubscribed(subs.some((x) => x.learner === accountId && x.sharer === sharer && x.status === "Active")))
+      .catch(() => {});
+    return () => {
+      live = false;
+    };
+  }, [accountId, req.learner, sharer]);
+
+  async function subscribe() {
+    if (sending || subscribed) return;
+    setSending(true);
+    setMsg("Waiting for wallet approval…");
+    try {
+      // The sharer approved this learner's budget on-chain when they pressed Offer to teach. Pay exactly that.
+      const approved = await getAcceptedBudget(sharer, req.learner);
+      if (!approved) throw new Error("The sharer has not confirmed this offer on-chain yet, so there is nothing to pay. Ask them (by email) to press Offer to teach again, then try once more.");
+      if (BigInt(approved) !== parseNear(String(req.budget))) throw new Error(`The sharer approved ${formatNear(approved, 4)} NEAR, which is not your ${req.budget} NEAR budget. Do not pay; ask them to offer again.`);
+      await call("subscribe_offer", { sharer }, BigInt(approved));
+      setSubscribed(true);
+      setMsg("Sent. Your payment is held in escrow and released weekly. The sharer has 24 hours to start posting; if they do not start sharing after 24 hours, click Refund on your subscription. Open My subscriptions (the card icon at the top) and press the refresh icon to see it.");
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Transaction failed");
+    } finally {
+      setSending(false);
+    }
+  }
 
   let action: React.ReactNode;
   if (!accountId) action = <button className="btn" onClick={signIn}>Connect wallet to subscribe</button>;
   else if (!isLearner) action = <p className="muted" style={{ fontSize: 13 }}>Only <b>{req.learner}</b> can subscribe from this request.</p>;
-  else if (sub.price === undefined) action = <p className="muted" style={{ fontSize: 13 }}>Checking…</p>;
-  else if (sub.price === null) action = <p className="muted" style={{ fontSize: 13 }}>This sharer has not set up subscriptions yet, so it cannot be paid from here. Email them to ask.</p>;
-  else if (sub.mismatch)
-    action = (
-      <>
-        <button className="btn" disabled style={{ opacity: 0.5, cursor: "not-allowed" }}>Subscribe · {req.budget} NEAR / 30 days</button>
-        <p className="muted" style={{ fontSize: 13 }}>This sharer&apos;s subscription is not set to your {req.budget} NEAR budget yet, so it cannot be paid from here. Email them and ask them to match it.</p>
-      </>
-    );
   else
     action = (
-      <button className="btn" onClick={() => void sub.subscribe()} disabled={sub.subscribed || sub.sending} style={sub.subscribed || sub.sending ? { opacity: 0.5, cursor: "not-allowed" } : undefined}>
-        {sub.subscribed ? "Subscribed ✓" : sub.sending ? "Subscribing…" : `Subscribe · ${req.budget} NEAR / 30 days`}
+      <button className="btn" onClick={() => void subscribe()} disabled={subscribed || sending} style={subscribed || sending ? { opacity: 0.5, cursor: "not-allowed" } : undefined}>
+        {subscribed ? "Subscribed ✓" : sending ? "Subscribing…" : `Subscribe · ${req.budget} NEAR / 30 days`}
       </button>
     );
 
@@ -43,8 +66,13 @@ function BudgetSubscribe({ req, sharer }: { req: RequestPost; sharer: string }) 
       <p className="pay-line">
         You pay <b>{req.budget} NEAR</b>{dur ? <> for {dur}</> : null}, held in escrow on NEAR and released to <AccountLink account={sharer} /> in four weekly parts. You can refund the unreleased weeks or open a dispute.
       </p>
+      {isLearner && !subscribed && (
+        <p className="offer-prompt" role="note">
+          Before you subscribe: email the sharer and wait for their reply. Subscribe on the site only after they have answered.
+        </p>
+      )}
       {action}
-      {sub.msg && <p role="status" className="muted" style={{ fontSize: 13, margin: "8px 0 0" }}>{sub.msg}</p>}
+      {msg && <p role="status" className="muted" style={{ fontSize: 13, margin: "8px 0 0" }}>{msg}</p>}
     </section>
   );
 }
@@ -136,9 +164,7 @@ export function RequestOffer({ learner, id, sharer }: { learner: string; id: str
         </ul>
       </section>
 
-      <SubscribeProvider sharer={sharer} expected={req.budget}>
-        <BudgetSubscribe req={req} sharer={sharer} />
-      </SubscribeProvider>
+      <BudgetSubscribe req={req} sharer={sharer} />
     </>
   );
 }

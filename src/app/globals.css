@@ -675,3 +675,8 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .rq-pay { display: grid; gap: 10px; justify-items: start; padding: 16px; border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14); }
 .rq-pay .pay-line { margin: 0; }
 .rq-note { margin: 0; font-size: 13px; line-height: 1.45; }
+/* My subscriptions: As Tutor / As Learner groups */
+.sub-group { margin: 22px 0 6px; }
+.sub-group-title { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 18px; }
+.sub-group-hint { margin: 2px 0 8px; font-size: 13px; }
+.count-chip { display: inline-grid; place-items: center; min-width: 24px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); }

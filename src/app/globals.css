@@ -680,3 +680,7 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .sub-group-title { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 18px; }
 .sub-group-hint { margin: 2px 0 8px; font-size: 13px; }
 .count-chip { display: inline-grid; place-items: center; min-width: 24px; height: 22px; padding: 0 8px; border-radius: 999px; font-size: 12px; font-weight: 700; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.2); }
+/* Unread badge on the header "My subscriptions" icon, and the chat notification colour */
+.icon-btn.has-badge { position: relative; }
+.icon-btn .count-badge { position: absolute; top: -5px; right: -6px; margin: 0; min-width: 18px; height: 18px; padding: 0 5px; font-size: 11px; }
+.note-chat { color: #7fb0ff; }

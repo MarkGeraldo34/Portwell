@@ -46,6 +46,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
   const [offering, setOffering] = useState<string | null>(null); // "learner/blockHeight" being answered
   const [note, setNote] = useState("");
   const [offerEmail, setOfferEmail] = useState("");
+  const [sentOffers, setSentOffers] = useState<string[]>([]); // "learner/id" I just offered on, shown before the chain catches up
   const [offerX, setOfferX] = useState<string | null>(null); // X handle proven by tweet challenge
   const [xmap, setXmap] = useState<Record<string, string>>({}); // sharer account -> verified X handle
 
@@ -125,7 +126,8 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
       setOffering(null);
       setNote("");
       setOfferEmail("");
-      setMsg("Offer sent. It can take a few seconds to appear.");
+      setSentOffers((l) => [...l, `${c.req.learner}/${c.req.id}`]);
+      setMsg("");
       setTimeout(() => void load(), 3000);
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Could not send the offer");
@@ -216,9 +218,20 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                   return (
                   <li key={o.sharer}>
                     <span className="offer-who"><AccountLink account={o.sharer} /></span>
-                    <span className={`chip${o.price === c.req.budget ? "" : " warn"}`}>
-                      {o.price} NEAR / 30 days {o.price === c.req.budget ? "· matches your budget" : `· your budget is ${c.req.budget} NEAR`}
-                    </span>
+                    {mine ? (
+                      <>
+                        <span className={o.price === c.req.budget ? "offer-says" : "offer-says warn"}>
+                          {o.price === c.req.budget
+                            ? "has accepted your budget and offered to teach you"
+                            : `offered to teach you at their price of ${o.price} NEAR (your budget is ${c.req.budget} NEAR)`}
+                        </span>
+                        <Link className="btn offer-sub" href={`/sharers/${o.sharer}`}>View and subscribe</Link>
+                      </>
+                    ) : (
+                      <span className={`chip${o.price === c.req.budget ? "" : " warn"}`}>
+                        {o.price} NEAR / 30 days {o.price === c.req.budget ? "· matches the budget" : `· the budget is ${c.req.budget} NEAR`}
+                      </span>
+                    )}
                     {xmap[o.sharer] ? (
                       <a className="contact-btn" href={`https://x.com/${encodeURIComponent(xmap[o.sharer])}`} target="_blank" rel="noopener noreferrer nofollow" title={`@${xmap[o.sharer]} on X, verified`} aria-label={`@${xmap[o.sharer]} on X, verified`}>
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -237,16 +250,10 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                         <img src="/gmail-logo.png" alt="" width={18} height={18} />
                       </a>
                     )}
-                    {mine && <Link className="offer-link" href={`/sharers/${o.sharer}`}>View &amp; subscribe →</Link>}
                   </li>
                   );
                 })}
               </ul>
-            )}
-            {mine && c.offers.length > 0 && (
-              <p className="offer-prompt" role="note">
-                Before you subscribe: email the sharer you are interested in subscribing to their strategy, and wait for their reply. Subscribe on the site only after they have answered.
-              </p>
             )}
 
             <div className="post-foot">
@@ -258,6 +265,10 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                   <span className="muted" style={{ fontSize: 13 }}>Your request</span>
                   <DeleteRequestButton learner={c.req.learner} id={c.req.id} offerSharers={c.offers.map((o) => o.sharer)} onDeleted={() => setCards((cs) => (cs ?? []).filter((x) => !(x.req.learner === c.req.learner && x.req.id === c.req.id)))} />
                 </span>
+              ) : c.offers.some((o) => o.sharer === accountId) || sentOffers.includes(id) ? (
+                <p className="offer-done" role="note">
+                  You have offered to teach <b>{c.req.learner}</b> at their <b>{c.req.budget} NEAR</b> budget
+                </p>
               ) : offering === id ? (
                 <div className="offer-box">
                   <VerifyX onChange={setOfferX} />

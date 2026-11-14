@@ -11,6 +11,7 @@ import { WarpBackground } from "@/components/WarpBackground";
 import { SideNav } from "@/components/SideNav";
 import { SubscriptionsIcon } from "@/components/SubscriptionsIcon";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
+import { Analytics } from "@vercel/analytics/next";
 
 export const metadata: Metadata = {
   title: "PORTWELL",
@@ -53,6 +54,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </main>
           </div>
         </WalletProvider>
+        <Analytics />
       </body>
     </html>
   );

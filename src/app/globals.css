@@ -649,3 +649,13 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .xv-link { background: none; border: 0; padding: 0; font: inherit; font-size: 13px; color: #6aa2ff; cursor: pointer; text-decoration: underline; justify-self: start; }
 .contact-btn.unverified { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: #ffb454; background: rgba(255,180,84,.1); border-color: rgba(255,180,84,.45); cursor: help; }
 .contact-btn .xv-tick { margin-left: 2px; }
+/* Scroll image reveal (ScrollImageReveal.tsx). Colors are untouched: the frame has no fill of its own. */
+.sir { position: relative; overflow: hidden; }
+.sir-round { border-radius: 16px; }
+.sir-img { position: absolute; left: 0; right: 0; width: 100%; object-fit: cover; display: block; }
+.sir-frame { display: block; width: 100%; aspect-ratio: 16 / 9; }
+.sir-frame.small { aspect-ratio: 16 / 10; }
+.how { margin: 36px 0 8px; }
+.how h2 { margin: 0 0 6px; }
+.how p { margin: 0 0 14px; }
+.how .sir { border: 1px solid rgba(255,255,255,.14); box-shadow: 0 10px 30px rgba(0,0,0,.25); }

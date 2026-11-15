@@ -78,6 +78,11 @@ export function Notifications() {
     void load();
   }, [load]);
 
+  // Hooks must run in the same order on every render, so these sit above the "connect your wallet" early return.
+  const byKind = (notes ?? []).filter((n) => filter === "all" || n.kind === filter);
+  const tools = useListTools(byKind, (n) => `${n.title} ${n.detail}`, 10);
+  const shown = tools.paged.slice;
+
   if (!accountId) {
     return (
       <section className="card">
@@ -87,14 +92,10 @@ export function Notifications() {
     );
   }
 
-  const byKind = (notes ?? []).filter((n) => filter === "all" || n.kind === filter);
-  const tools = useListTools(byKind, (n) => `${n.title} ${n.detail}`, 10);
-  const shown = tools.paged.slice;
-
   return (
-    <>
-      <div className="row">
-        <div className="tabs" role="tablist">
+    <div className="notes-page">
+      <div className="note-bar">
+        <div className="tabs" role="tablist" aria-label="Filter notifications">
           {FILTERS.map((f) => (
             <button key={f.id} role="tab" aria-selected={filter === f.id} className={filter === f.id ? "tab on" : "tab"} onClick={() => setFilter(f.id)}>
               {f.label}
@@ -120,10 +121,12 @@ export function Notifications() {
               </span>
               <span className="note-body">
                 <b><Linkify text={n.title} /></b>
-                <span><Linkify text={n.detail} /></span>
-                {n.href && <Link className="note-open" href={n.href}>{n.kind === "offer" ? "View and subscribe" : "Open →"}</Link>}
+                <span className="note-detail"><Linkify text={n.detail} /></span>
+                <span className="note-meta">
+                  {n.href && <Link className="note-open" href={n.href}>{n.kind === "offer" ? "View and subscribe" : "Open →"}</Link>}
+                  <span className="note-time">{ago(n.ts)}</span>
+                </span>
               </span>
-              <span className="note-time">{ago(n.ts)}</span>
             </>
           );
           return (
@@ -134,6 +137,6 @@ export function Notifications() {
         })}
       </ul>
       {notes !== null && <PaginationSummary paged={tools.paged} noun={tools.paged.total === 1 ? "notification" : "notifications"} onPage={tools.setPage} />}
-    </>
+    </div>
   );
 }

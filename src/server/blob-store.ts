@@ -1,5 +1,6 @@
 import "server-only";
-import { del, list, put } from "@vercel/blob";
+import { del as vDel, list as vList, put as vPut } from "@vercel/blob";
+import { DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 import { cardFrom, parseCard, type PostCard, type PostValue } from "@/lib/post-format";
 import { keyFrom, open, seal } from "@/lib/secret-box";
 
@@ -33,15 +34,110 @@ export const blobUsesOidc = () => !blobToken() && !!process.env.BLOB_STORE_ID;
  */
 const contentSecret = () => process.env.CONTENT_SECRET || blobToken();
 
+/**
+ * Cloudflare R2 (S3 compatible). When these four variables are set, ALL post, update, chat and verification data
+ * goes to a private R2 bucket instead of Vercel Blob. R2's free tier allows a million writes/lists a month.
+ * Uploaded images and videos still use Vercel Blob (the browser uploads straight to it), pasted media links need no storage.
+ */
+const r2Env = () => {
+  const { R2_ACCOUNT_ID: account, R2_ACCESS_KEY_ID: id, R2_SECRET_ACCESS_KEY: secret, R2_BUCKET: bucket } = process.env;
+  return account && id && secret && bucket ? { account, id, secret, bucket } : null;
+};
+export const usingR2 = () => r2Env() !== null;
+
+/** Why Vercel Blob (used for media uploads) cannot be used, or null when it is ready. */
+export function vercelBlobProblem(): string | null {
+  if (!blobToken() && !process.env.BLOB_STORE_ID) return "file uploads need Vercel Blob, which is not set up. Paste a media link instead";
+  return null;
+}
+
 /** Why storage cannot be used, or null when it is ready. */
 export function blobProblem(): string | null {
-  if (!blobToken() && !process.env.BLOB_STORE_ID) return "post storage is not set up yet (Vercel Blob)";
+  if (!usingR2() && !blobToken() && !process.env.BLOB_STORE_ID) return "post storage is not set up yet (Cloudflare R2 or Vercel Blob)";
   if (!contentSecret()) return "CONTENT_SECRET is not set in Vercel (a random secret used to encrypt locked steps)";
   return null;
 }
 
 export const blobConfigured = () => blobProblem() === null;
 const key = () => keyFrom(contentSecret() ?? "");
+
+// ---- One small storage interface over R2 and Vercel Blob. Everything below uses only these four calls. ----
+
+interface Obj {
+  pathname: string;
+  /** Reads the object as text, or null if it is missing or unreadable. */
+  text: () => Promise<string | null>;
+}
+
+let s3: S3Client | null = null;
+const client = () => {
+  const r = r2Env()!;
+  return (s3 ??= new S3Client({ region: "auto", endpoint: `https://${r.account}.r2.cloudflarestorage.com`, credentials: { accessKeyId: r.id, secretAccessKey: r.secret } }));
+};
+const r2Read = (pathname: string) => async (): Promise<string | null> => {
+  try {
+    const out = await client().send(new GetObjectCommand({ Bucket: r2Env()!.bucket, Key: pathname }));
+    return (await out.Body?.transformToString()) ?? null;
+  } catch {
+    return null;
+  }
+};
+const urlRead = (url: string) => async (): Promise<string | null> => {
+  try {
+    const res = await fetch(url, { cache: "no-store" });
+    return res.ok ? await res.text() : null;
+  } catch {
+    return null;
+  }
+};
+
+async function putObj(pathname: string, body: string, contentType: string): Promise<void> {
+  if (usingR2()) {
+    await client().send(new PutObjectCommand({ Bucket: r2Env()!.bucket, Key: pathname, Body: body, ContentType: contentType }));
+    return;
+  }
+  await vPut(pathname, body, { access: "public", contentType, addRandomSuffix: false, allowOverwrite: true, token: blobToken() });
+}
+
+/** Objects whose path starts with `prefix`, at most `max`. */
+async function listObjs(prefix: string, max: number): Promise<Obj[]> {
+  const out: Obj[] = [];
+  if (usingR2()) {
+    let token: string | undefined;
+    do {
+      const page = await client().send(new ListObjectsV2Command({ Bucket: r2Env()!.bucket, Prefix: prefix, ContinuationToken: token, MaxKeys: Math.min(1000, max - out.length) }));
+      for (const o of page.Contents ?? []) if (o.Key) out.push({ pathname: o.Key, text: r2Read(o.Key) });
+      token = page.IsTruncated ? page.NextContinuationToken : undefined;
+    } while (token && out.length < max);
+    return out;
+  }
+  let cursor: string | undefined;
+  do {
+    const page = await vList({ prefix, limit: Math.min(1000, max - out.length), cursor, token: blobToken() });
+    for (const b of page.blobs) out.push({ pathname: b.pathname, text: urlRead(b.url) });
+    cursor = page.hasMore ? page.cursor : undefined;
+  } while (cursor && out.length < max);
+  return out;
+}
+
+async function delObjs(paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  if (usingR2()) {
+    await client().send(new DeleteObjectsCommand({ Bucket: r2Env()!.bucket, Delete: { Objects: paths.map((Key) => ({ Key })) } }));
+    return;
+  }
+  const found = (await Promise.all(paths.map((p) => vList({ prefix: p, limit: 1, token: blobToken() })))).flatMap((r) => r.blobs.filter((b) => paths.includes(b.pathname)).map((b) => b.url));
+  if (found.length) await vDel(found, { token: blobToken() });
+}
+
+/** One object by exact path (R2 reads it directly; Vercel Blob needs a list to find its URL). */
+async function getObj(pathname: string): Promise<Obj | null> {
+  if (usingR2()) {
+    const text = await r2Read(pathname)();
+    return text === null ? null : { pathname, text: async () => text };
+  }
+  return (await listObjs(pathname, 1)).find((o) => o.pathname === pathname) ?? null;
+}
 
 const MAX_POSTS = 100;
 
@@ -50,48 +146,51 @@ export async function savePost(sharer: string, value: PostValue): Promise<PostCa
   const id = `${ts}-${Math.random().toString(36).slice(2, 8)}`;
   const gated: GatedContent = { steps: value.steps, risks: value.risks };
   // Gated content first: a card must never appear without its content.
-  await put(`private/${id}.bin`, seal(key(), JSON.stringify(gated)), { access: "public", contentType: "text/plain", addRandomSuffix: false, token: blobToken() });
+  await putObj(`private/${id}.bin`, seal(key(), JSON.stringify(gated)), "text/plain");
   const card = cardFrom(value, id, sharer, ts);
-  await put(`posts/${id}.json`, JSON.stringify(card), { access: "public", contentType: "application/json", addRandomSuffix: false, token: blobToken() });
+  await putObj(`posts/${id}.json`, JSON.stringify(card), "application/json");
+  cardsCache = null;
   return card;
 }
 
-export async function listCards(): Promise<PostCard[]> {
-  const out: PostCard[] = [];
-  let cursor: string | undefined;
-  const blobs: { url: string }[] = [];
-  do {
-    const page = await list({ prefix: "posts/", limit: 200, cursor, token: blobToken() });
-    blobs.push(...page.blobs);
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor && blobs.length < 400);
+// The feed lists posts on every page view. A short cache keeps storage operations (and the free quota) from running out.
+let cardsCache: { at: number; cards: PostCard[] } | null = null;
+const CARDS_TTL_MS = 30_000;
 
+export async function listCards(): Promise<PostCard[]> {
+  if (cardsCache && Date.now() - cardsCache.at < CARDS_TTL_MS) return cardsCache.cards;
+  const objs = await listObjs("posts/", 400);
   const cards = await Promise.all(
-    blobs.map(async (b) => {
+    objs.map(async (o) => {
       try {
-        const res = await fetch(b.url, { cache: "no-store" });
-        return res.ok ? parseCard(await res.json()) : null;
+        const t = await o.text();
+        return t ? parseCard(JSON.parse(t)) : null;
       } catch {
         return null;
       }
     }),
   );
-  for (const c of cards) if (c) out.push(c);
-  return out.sort((a, b) => b.ts - a.ts).slice(0, MAX_POSTS);
+  const out = cards.filter((c): c is PostCard => !!c).sort((x, y) => y.ts - x.ts).slice(0, MAX_POSTS);
+  cardsCache = { at: Date.now(), cards: out };
+  return out;
 }
 
 /** Deletes a post (card and encrypted content). Only the account that published it may. */
 export async function deletePost(id: string, sharer: string): Promise<"deleted" | "not_found" | "forbidden"> {
   if (!/^[0-9]+-[a-z0-9]{1,8}$/.test(id)) return "not_found";
-  const cardPage = await list({ prefix: `posts/${id}.json`, limit: 1, token: blobToken() });
-  const cardBlob = cardPage.blobs[0];
-  if (!cardBlob) return "not_found";
-  const res = await fetch(cardBlob.url, { cache: "no-store" });
-  const card = res.ok ? parseCard(await res.json()) : null;
+  const cardObj = await getObj(`posts/${id}.json`);
+  if (!cardObj) return "not_found";
+  const text = await cardObj.text();
+  let card: PostCard | null = null;
+  try {
+    card = text ? parseCard(JSON.parse(text)) : null;
+  } catch {
+    card = null;
+  }
   if (!card) return "not_found";
   if (card.sharer !== sharer) return "forbidden";
-  const gated = await list({ prefix: `private/${id}.bin`, limit: 1, token: blobToken() });
-  await del([cardBlob.url, ...gated.blobs.map((b) => b.url)], { token: blobToken() });
+  await delObjs([`posts/${id}.json`, `private/${id}.bin`]);
+  cardsCache = null;
   return "deleted";
 }
 
@@ -106,27 +205,17 @@ export interface StoredUpdate {
 export async function saveUpdate(sharer: string, u: { postId: string; title: string; body: string }): Promise<StoredUpdate> {
   const ts = Date.now();
   const stored: StoredUpdate = { ...u, ts };
-  await put(`updates/${sharer}/${ts}-${Math.random().toString(36).slice(2, 8)}.bin`, seal(key(), JSON.stringify(stored)), {
-    access: "public",
-    contentType: "text/plain",
-    addRandomSuffix: false,
-    token: blobToken(),
-  });
+  await putObj(`updates/${sharer}/${ts}-${Math.random().toString(36).slice(2, 8)}.bin`, seal(key(), JSON.stringify(stored)), "text/plain");
   return stored;
 }
 
-async function updateBlobs(sharer: string): Promise<{ url: string; ts: number }[]> {
-  const out: { url: string; ts: number }[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await list({ prefix: `updates/${sharer}/`, limit: 200, cursor, token: blobToken() });
-    for (const b of page.blobs) {
-      const ts = Number(b.pathname.split("/").pop()?.split("-")[0]);
-      if (Number.isFinite(ts)) out.push({ url: b.url, ts });
-    }
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor && out.length < 400);
-  return out.sort((a, b) => b.ts - a.ts);
+async function updateBlobs(sharer: string): Promise<{ obj: Obj; ts: number }[]> {
+  const out: { obj: Obj; ts: number }[] = [];
+  for (const obj of await listObjs(`updates/${sharer}/`, 400)) {
+    const ts = Number(obj.pathname.split("/").pop()?.split("-")[0]);
+    if (Number.isFinite(ts)) out.push({ obj, ts });
+  }
+  return out.sort((x, y) => y.ts - x.ts);
 }
 
 /** When each update was posted. Public: carries no content. */
@@ -140,8 +229,8 @@ export async function readUpdates(sharer: string): Promise<StoredUpdate[]> {
   const read = await Promise.all(
     blobs.map(async (b) => {
       try {
-        const res = await fetch(b.url, { cache: "no-store" });
-        const text = res.ok ? open(key(), await res.text()) : null;
+        const raw = await b.obj.text();
+        const text = raw ? open(key(), raw) : null;
         if (!text) return null;
         const p = JSON.parse(text) as Partial<StoredUpdate>;
         return typeof p.title === "string" && typeof p.body === "string" && typeof p.postId === "string" ? ({ postId: p.postId, title: p.title, body: p.body, ts: b.ts } as StoredUpdate) : null;
@@ -161,34 +250,24 @@ const chatPrefix = (sharer: string, learner: string) => `chat/${sharer}/${learne
 /** Messages live at chat/<sharer>/<learner>/<ts>-<l|s>-<rand>.bin, encrypted. */
 export async function saveChatMessage(sharer: string, learner: string, from: "learner" | "sharer", text: string): Promise<{ ts: number }> {
   const ts = Date.now();
-  await put(`${chatPrefix(sharer, learner)}${ts}-${from === "sharer" ? "s" : "l"}-${Math.random().toString(36).slice(2, 7)}.bin`, seal(key(), JSON.stringify({ text })), {
-    access: "public",
-    contentType: "text/plain",
-    addRandomSuffix: false,
-    token: blobToken(),
-  });
+  await putObj(`${chatPrefix(sharer, learner)}${ts}-${from === "sharer" ? "s" : "l"}-${Math.random().toString(36).slice(2, 7)}.bin`, seal(key(), JSON.stringify({ text })), "text/plain");
   return { ts };
 }
 
 /** Messages newer than `since` (ms), oldest first. Only call after the viewer is authorised for this pair. */
 export async function listChatMessages(sharer: string, learner: string, since: number): Promise<{ from: "learner" | "sharer"; text: string; ts: number }[]> {
-  const items: { url: string; ts: number; from: "learner" | "sharer" }[] = [];
-  let cursor: string | undefined;
-  do {
-    const page = await list({ prefix: chatPrefix(sharer, learner), limit: 200, cursor, token: blobToken() });
-    for (const b of page.blobs) {
-      const [ts, who] = (b.pathname.split("/").pop() ?? "").split("-");
-      const n = Number(ts);
-      if (Number.isFinite(n) && n > since) items.push({ url: b.url, ts: n, from: who === "s" ? "sharer" : "learner" });
-    }
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor && items.length < 300);
-  items.sort((a, b) => a.ts - b.ts);
+  const items: { obj: Obj; ts: number; from: "learner" | "sharer" }[] = [];
+  for (const obj of await listObjs(chatPrefix(sharer, learner), 300)) {
+    const [ts, who] = (obj.pathname.split("/").pop() ?? "").split("-");
+    const n = Number(ts);
+    if (Number.isFinite(n) && n > since) items.push({ obj, ts: n, from: who === "s" ? "sharer" : "learner" });
+  }
+  items.sort((x, y) => x.ts - y.ts);
   const read = await Promise.all(
     items.slice(-100).map(async (m) => {
       try {
-        const res = await fetch(m.url, { cache: "no-store" });
-        const text = res.ok ? open(key(), await res.text()) : null;
+        const raw = await m.obj.text();
+        const text = raw ? open(key(), raw) : null;
         const t = text ? (JSON.parse(text) as { text?: unknown }).text : null;
         return typeof t === "string" ? { from: m.from, text: t, ts: m.ts } : null;
       } catch {
@@ -202,16 +281,13 @@ export async function listChatMessages(sharer: string, learner: string, since: n
 export async function readGated(id: string): Promise<GatedContent | null> {
   if (!/^[0-9]+-[a-z0-9]{1,8}$/.test(id)) return null;
   try {
-    const page = await list({ prefix: `private/${id}.bin`, limit: 1, token: blobToken() });
-    const blob = page.blobs[0];
-    if (!blob) return null;
-    const res = await fetch(blob.url, { cache: "no-store" });
-    if (!res.ok) return null;
-    const text = open(key(), await res.text());
+    const obj = await getObj(`private/${id}.bin`);
+    const raw = obj ? await obj.text() : null;
+    const text = raw ? open(key(), raw) : null;
     if (!text) return null;
     const parsed = JSON.parse(text) as Partial<GatedContent>;
     if (!Array.isArray(parsed.steps) || typeof parsed.risks !== "string") return null;
-    return { steps: parsed.steps.filter((s): s is string => typeof s === "string"), risks: parsed.risks };
+    return { steps: parsed.steps.filter((x): x is string => typeof x === "string"), risks: parsed.risks };
   } catch {
     return null;
   }
@@ -229,12 +305,10 @@ const xPath = (account: string) => `xverified/${account}.json`;
 export async function getXVerified(account: string): Promise<XVerified | null> {
   if (!/^[a-z0-9._-]{2,64}$/.test(account) || !blobConfigured()) return null;
   try {
-    const page = await list({ prefix: xPath(account), limit: 1, token: blobToken() });
-    const blob = page.blobs.find((b) => b.pathname === xPath(account));
-    if (!blob) return null;
-    const res = await fetch(blob.url, { cache: "no-store" });
-    if (!res.ok) return null;
-    const j = (await res.json()) as Partial<XVerified>;
+    const obj = await getObj(xPath(account));
+    const raw = obj ? await obj.text() : null;
+    if (!raw) return null;
+    const j = JSON.parse(raw) as Partial<XVerified>;
     return typeof j.handle === "string" && /^[A-Za-z0-9_]{1,15}$/.test(j.handle) ? { handle: j.handle, tweet: String(j.tweet ?? ""), ts: Number(j.ts) || 0 } : null;
   } catch {
     return null;
@@ -253,18 +327,11 @@ export async function xVerifiedFor(accounts: string[]): Promise<Record<string, s
 /** Which account (if any) has already verified this handle. Used so one X account cannot sit behind two wallets. */
 export async function xHandleOwner(handle: string): Promise<string | null> {
   const want = handle.toLowerCase();
-  let cursor: string | undefined;
-  const blobs: { url: string; pathname: string }[] = [];
-  do {
-    const page = await list({ prefix: "xverified/", limit: 200, cursor, token: blobToken() });
-    blobs.push(...page.blobs);
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor && blobs.length < 1000);
-  for (const b of blobs) {
+  for (const o of await listObjs("xverified/", 1000)) {
     try {
-      const res = await fetch(b.url, { cache: "no-store" });
-      const j = res.ok ? ((await res.json()) as Partial<XVerified>) : null;
-      if (j && typeof j.handle === "string" && j.handle.toLowerCase() === want) return b.pathname.slice("xverified/".length).replace(/\.json$/, "");
+      const raw = await o.text();
+      const j = raw ? (JSON.parse(raw) as Partial<XVerified>) : null;
+      if (j && typeof j.handle === "string" && j.handle.toLowerCase() === want) return o.pathname.slice("xverified/".length).replace(/\.json$/, "");
     } catch {
       /* skip unreadable entries */
     }
@@ -273,7 +340,7 @@ export async function xHandleOwner(handle: string): Promise<string | null> {
 }
 
 export async function saveXVerified(account: string, v: XVerified): Promise<void> {
-  await put(xPath(account), JSON.stringify(v), { access: "public", contentType: "application/json", addRandomSuffix: false, allowOverwrite: true, cacheControlMaxAge: 60, token: blobToken() });
+  await putObj(xPath(account), JSON.stringify(v), "application/json");
 }
 
 const incomingCache = new Map<string, { at: number; v: { from: string; ts: number }[] }>();
@@ -285,27 +352,21 @@ const incomingCache = new Map<string, { at: number; v: { from: string; ts: numbe
 export async function chatIncoming(account: string): Promise<{ from: string; ts: number }[]> {
   if (!/^[a-z0-9._-]{2,64}$/.test(account) || !blobConfigured()) return [];
   const hit = incomingCache.get(account);
-  if (hit && Date.now() - hit.at < 15_000) return hit.v;
+  if (hit && Date.now() - hit.at < 30_000) return hit.v;
   const latest = new Map<string, { ts: number; mine: boolean }>();
-  let cursor: string | undefined;
-  let seen = 0;
-  do {
-    const page = await list({ prefix: "chat/", limit: 1000, cursor, token: blobToken() });
-    seen += page.blobs.length;
-    for (const b of page.blobs) {
-      const [root, sharer, learner, file] = b.pathname.split("/");
-      if (root !== "chat" || !file || (sharer !== account && learner !== account)) continue;
-      const [tsText, who] = file.split("-");
-      const ts = Number(tsText);
-      if (!Number.isFinite(ts)) continue;
-      const iAmSharer = sharer === account;
-      const mine = (who === "s") === iAmSharer;
-      const other = iAmSharer ? learner : sharer;
-      const prev = latest.get(other);
-      if (!prev || ts > prev.ts) latest.set(other, { ts, mine });
-    }
-    cursor = page.hasMore ? page.cursor : undefined;
-  } while (cursor && seen < 5000);
+  // Conversations are stored as chat/<sharer>/<learner>/..., so only the ones that name this account are read.
+  for (const b of await listObjs("chat/", 5000)) {
+    const [root, sharer, learner, file] = b.pathname.split("/");
+    if (root !== "chat" || !file || (sharer !== account && learner !== account)) continue;
+    const [tsText, who] = file.split("-");
+    const ts = Number(tsText);
+    if (!Number.isFinite(ts)) continue;
+    const iAmSharer = sharer === account;
+    const mine = (who === "s") === iAmSharer;
+    const other = iAmSharer ? learner : sharer;
+    const prev = latest.get(other);
+    if (!prev || ts > prev.ts) latest.set(other, { ts, mine });
+  }
   const v = Array.from(latest, ([from, m]) => ({ from, ts: m.ts, mine: m.mine })).filter((m) => !m.mine).map(({ from, ts }) => ({ from, ts }));
   incomingCache.set(account, { at: Date.now(), v });
   return v;

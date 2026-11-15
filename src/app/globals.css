@@ -704,3 +704,22 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
 .sub-source-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .sub-source-go { flex: none; opacity: .7; }
 .sub-source:hover .sub-source-go { opacity: 1; }
+/* Notifications: built to fit a phone */
+.notes-page { min-width: 0; }
+.note-bar { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.note-bar .tabs { flex: 1 1 auto; min-width: 0; display: flex; flex-wrap: nowrap; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.note-bar .tabs::-webkit-scrollbar { display: none; }
+.note-bar .tab { flex: none; white-space: nowrap; }
+.note-bar .icon-btn { flex: none; }
+.note-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; }
+.note-meta .note-time { display: inline; font-size: 12px; color: var(--muted); }
+.note-detail { overflow-wrap: anywhere; }
+.note > div { min-width: 0; }
+@media (max-width: 640px) {
+  .note-bar .tab { padding: 8px 14px; font-size: 13.5px; }
+  .note > div { align-items: flex-start; gap: 10px; padding: 12px; border-radius: 12px; }
+  .note-ico { width: 34px; height: 34px; }
+  .note-body b { font-size: 14px; line-height: 1.35; }
+  .note-open { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 999px; background: rgba(127,176,255,.12); border: 1px solid rgba(127,176,255,.35); }
+  .notes { gap: 8px; }
+}

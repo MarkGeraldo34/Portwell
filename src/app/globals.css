@@ -723,3 +723,12 @@ html:root body :is(.card, .post, .share .card, .subs .card) :is(.card, .post) { 
   .note-open { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border-radius: 999px; background: rgba(127,176,255,.12); border: 1px solid rgba(127,176,255,.35); }
   .notes { gap: 8px; }
 }
+/* Lessons on the request page */
+.lessons .lesson-form { display: grid; gap: 8px; margin: 12px 0 0; }
+.lesson-count { margin: 16px 0 8px; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: #7fb0ff; }
+.lesson-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.lesson-list li { padding: 12px 14px; border-radius: 12px; background: rgba(255,255,255,.05); border-left: 3px solid #3b78ff; min-width: 0; }
+.lesson-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.lesson-head b { overflow-wrap: anywhere; }
+.lesson-head time { font-size: 12px; color: var(--muted); }
+.lesson-list p { margin: 6px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.55; }

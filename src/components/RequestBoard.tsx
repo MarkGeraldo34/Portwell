@@ -252,7 +252,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
               {mine ? (
                 <span className="req-actions">
                   <span className="muted" style={{ fontSize: 13 }}>Your request</span>
-                  <DeleteRequestButton learner={c.req.learner} id={c.req.id} offerSharers={c.offers.map((o) => o.sharer)} onDeleted={() => setCards((cs) => (cs ?? []).filter((x) => !(x.req.learner === c.req.learner && x.req.id === c.req.id)))} />
+                  <DeleteRequestButton learner={c.req.learner} id={c.req.id} offerSharers={c.offers.map((o) => o.sharer)} ts={c.req.ts} onDeleted={() => setCards((cs) => (cs ?? []).filter((x) => !(x.req.learner === c.req.learner && x.req.id === c.req.id)))} />
                 </span>
               ) : c.offers.some((o) => o.sharer === accountId) || sentOffers.includes(id) ? (
                 <p className="offer-done" role="note">

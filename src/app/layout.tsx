@@ -25,16 +25,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <CoolModeEverywhere />
           <WarpBackground fixed />
           <header>
-            <Link href="/" aria-label="PORTWELL home" style={{ display: "inline-flex", alignItems: "center", gap: 10, textDecoration: "none", color: "inherit" }}>
+            <Link href="/" aria-label="PORTWELL home" className="brand">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo.png"
                 alt=""
                 width={40}
                 height={40}
+                className="brand-logo"
                 style={{ filter: "brightness(1.35) saturate(1.25) drop-shadow(0 0 10px rgba(217,47,84,.55)) drop-shadow(0 0 18px rgba(59,120,255,.35))" }}
               />
-              <strong style={{ fontSize: 22, letterSpacing: 0, textTransform: "none" }}>Portwell</strong>
+              <strong className="brand-name">Portwell</strong>
             </Link>
             <nav className="row">
               <SubscriptionsIcon />

@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { DeleteRequestButton } from "./DeleteButtons";
 import { useWallet } from "./WalletProvider";
 import { AccountLink } from "./AccountLink";
 import { loadBoard } from "@/lib/social";
@@ -81,7 +83,8 @@ function BudgetSubscribe({ req, sharer, offerTs }: { req: RequestPost; sharer: s
 
 export function RequestOffer({ learner, id, sharer }: { learner: string; id: string; sharer: string }) {
   const { accountId } = useWallet();
-  const [state, setState] = useState<{ req: RequestPost; offer: OfferPost } | "loading" | "missing" | "error">("loading");
+  const router = useRouter();
+  const [state, setState] = useState<{ req: RequestPost; offer: OfferPost; offerSharers: string[] } | "loading" | "missing" | "error">("loading");
   const [xHandle, setXHandle] = useState<string | null>(null);
 
   useEffect(() => {
@@ -91,7 +94,7 @@ export function RequestOffer({ learner, id, sharer }: { learner: string; id: str
         if (!live) return;
         const hit = board.find((b) => b.request.learner === learner && b.request.id === id);
         const offer = hit?.offers.find((o) => o.sharer === sharer);
-        setState(hit && offer ? { req: hit.request, offer } : "missing");
+        setState(hit && offer ? { req: hit.request, offer, offerSharers: hit.offers.map((o) => o.sharer) } : "missing");
       })
       .catch(() => live && setState("error"));
     fetch(`/api/x-verify?accounts=${encodeURIComponent(sharer)}`)
@@ -113,7 +116,7 @@ export function RequestOffer({ learner, id, sharer }: { learner: string; id: str
       </>
     );
 
-  const { req, offer } = state;
+  const { req, offer, offerSharers } = state;
   const addr = offer.email;
   return (
     <>
@@ -136,6 +139,14 @@ export function RequestOffer({ learner, id, sharer }: { learner: string; id: str
           </div>
         </div>
         {req.details && <p className="req-details">{req.details}</p>}
+        {accountId === req.learner && (
+          <div className="post-foot">
+            <span className="req-actions">
+              <span className="muted" style={{ fontSize: 13 }}>Your request</span>
+              <DeleteRequestButton learner={req.learner} id={req.id} offerSharers={offerSharers} ts={req.ts} onDeleted={() => router.push("/my-requests")} />
+            </span>
+          </div>
+        )}
       </article>
 
       <section className="card" aria-label="The offer">

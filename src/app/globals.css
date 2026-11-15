@@ -782,3 +782,21 @@ header nav .row { flex-wrap: nowrap; gap: 6px; }
   .side-pill { border-radius: 14px; }
 }
 .sidenav.collapsed .side-toggle .side-label { flex: 0 0 0; }
+/* ---- Halo rim on every card (cards, posts, notifications): gradient edge, bright trail that circles on hover / focus ---- */
+:is(.card, .post, .note > div):not(.card .card):not(.post .card) { position: relative; }
+:is(.card, .post, .note > div):not(.card .card):not(.post .card)::after {
+  content: ""; position: absolute; inset: 0; z-index: 2; border-radius: inherit; padding: 1px; pointer-events: none;
+  background: linear-gradient(135deg, rgba(217,47,84,.5), rgba(59,120,255,.42) 55%, rgba(47,214,232,.5));
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+  transition: opacity .2s ease;
+}
+:is(.card, .post, .note > div):not(.card .card):not(.post .card):is(:hover, :focus-within)::after {
+  background:
+    conic-gradient(from var(--halo-angle), transparent 0 52%, rgba(217,47,84,.95) 66%, rgba(200,140,255,.98) 78%, rgba(47,214,232,.95) 90%, transparent 100%),
+    linear-gradient(135deg, rgba(217,47,84,.55), rgba(59,120,255,.5) 55%, rgba(47,214,232,.55));
+  animation: halo-spin 5.25s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  :is(.card, .post, .note > div):not(.card .card):not(.post .card):is(:hover, :focus-within)::after { animation: none; }
+}

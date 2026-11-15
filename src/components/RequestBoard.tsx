@@ -1,5 +1,6 @@
 "use client";
 
+import { BlurFade } from "./BlurFade";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { useWallet } from "./WalletProvider";
@@ -189,7 +190,8 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
         const id = `${c.req.learner}/${c.req.id}`;
         const mine = c.req.learner === accountId;
         return (
-          <article className="post" key={id}>
+          <BlurFade key={id} inView>
+          <article className="post">
             <div className="post-head">
               <span className="avatar" aria-hidden="true">{c.req.learner[0]?.toUpperCase()}</span>
               <div className="post-id">
@@ -276,6 +278,7 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
               )}
             </div>
           </article>
+          </BlurFade>
         );
       })}
       {cards !== null && !loadErr && <PaginationSummary paged={tools.paged} noun={tools.paged.total === 1 ? "request" : "requests"} onPage={tools.setPage} />}

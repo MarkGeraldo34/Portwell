@@ -3,7 +3,7 @@ import { handleUpload, handleUploadPresigned, type HandleUploadBody, type Handle
 import { issueSignedToken } from "@vercel/blob";
 import { verifyProof, type Proof } from "@/lib/publish-auth";
 import { realDeps } from "@/server/access";
-import { blobProblem, blobToken, blobUsesOidc } from "@/server/blob-store";
+import { blobToken, blobUsesOidc, vercelBlobProblem } from "@/server/blob-store";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/avif"];
 const VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
@@ -45,7 +45,7 @@ async function authorizeUpload(pathname: string, clientPayload: string | null) {
 export async function POST(request: Request) {
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
   if (limited(ip)) return NextResponse.json({ error: "Too many requests" }, { status: 429 });
-  const problem = blobProblem();
+  const problem = vercelBlobProblem();
   if (problem) return NextResponse.json({ error: `Media storage is not ready: ${problem}.` }, { status: 503 });
 
   const body = (await request.json().catch(() => null)) as (HandleUploadBody | HandleUploadPresignedBody) | null;

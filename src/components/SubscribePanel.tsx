@@ -42,6 +42,13 @@ function useSubscribeState(sharer: string, expected?: number) {
   const expectedYocto = expected === undefined ? null : parseNear(String(expected));
   const mismatch = !!price && expectedYocto !== null && BigInt(price) !== expectedYocto;
 
+  // How many subscriptions this learner has ever made to this sharer, read straight from the contract.
+  async function countMine(): Promise<number> {
+    if (!accountId) return 0;
+    const subs = await listSubscriptionsFor(accountId);
+    return subs.filter((x) => x.learner === accountId && x.sharer === sharer).length;
+  }
+
   async function subscribe() {
     if (!price || sending || subscribed || mismatch) return;
     setSending(true);
@@ -55,9 +62,22 @@ function useSubscribeState(sharer: string, expected?: number) {
         setPrice(current);
         throw new Error(`The sharer changed their price to ${formatNear(current)} NEAR. Review it and press Subscribe again.`);
       }
+      const before = await countMine();
       await call("subscribe", { sharer }, BigInt(current));
+      // Never trust the wallet's "done" alone (a closed popup or a failed transaction can look like success):
+      // only show Subscribed once the contract actually holds a new subscription.
+      setMsg("Waiting for the network to confirm your subscription…");
+      let confirmed = false;
+      for (let i = 0; i < 10 && !confirmed; i++) {
+        await new Promise((r) => setTimeout(r, 2000));
+        confirmed = (await countMine().catch(() => before)) > before;
+      }
+      if (!confirmed) {
+        setMsg("No subscription was created, so nothing was charged. If you did approve it in your wallet, wait a few seconds and reload the page.");
+        return;
+      }
       setSubscribed(true);
-      setMsg("Sent. Funds are held in escrow and released weekly. The sharer has 24 hours to start posting; if they do not start sharing after 24 hours, click Refund on your subscription. Open My subscriptions (the card icon at the top) and press the refresh icon to see it.");
+      setMsg("Subscribed. Funds are held in escrow and released weekly. The sharer has 24 hours to start posting; if they do not start sharing after 24 hours, click Refund on your subscription. Open My subscriptions (the card icon at the top) and press the refresh icon to see it.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Transaction failed");
     } finally {
@@ -107,6 +127,11 @@ export function SealedSubscribe({ withAmount = false }: { withAmount?: boolean }
         </button>
       ) : (
         <button className="btn" onClick={signIn}>Connect wallet to subscribe</button>
+      )}
+      {subscribed && !msg && (
+        <p className="muted" style={{ margin: "8px 0 0", fontSize: 13 }}>
+          You already have an active subscription to @{sub.sharer}. It covers all of their posts, so no new payment is needed. See it in My subscriptions.
+        </p>
       )}
       {msg && <p role="status" className="muted" style={{ margin: "8px 0 0", fontSize: 13 }}>{msg}</p>}
     </div>

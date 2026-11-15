@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { Buffer } from "buffer";
 import { upload, uploadPresigned } from "@vercel/blob/client";
+import { saveOwnPost } from "@/lib/own-posts";
 import { useWallet } from "./WalletProvider";
 import { VerifyX } from "./VerifyX";
 import { hashPost, normalizePost, POST_LIMITS, validateMedia, type PostInput } from "@/lib/post-format";
@@ -167,8 +168,10 @@ export function PostForm({ onPublished }: { onPublished: () => void }) {
       const auth = await sign("publish", await hashPost(norm.value));
       say("Publishing…");
       const res = await fetch("/api/posts", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ post: input, auth }) });
-      const json = (await res.json().catch(() => ({}))) as { error?: string };
+      const json = (await res.json().catch(() => ({}))) as { error?: string; id?: string };
       if (!res.ok) return say(json.error ?? "Could not publish. Try again.", res.status === 422 || res.status === 503);
+      // Keep your own copy in this browser so you can read the post back without signing anything.
+      if (json.id && accountId) saveOwnPost(accountId, json.id, { steps: norm.value.steps, risks: norm.value.risks });
       say("Published. Your post is now on the feed.");
       // The capital needed IS the monthly price: save it in the escrow contract so learners see and pay exactly this.
       if (CONTRACT_CONFIGURED) {

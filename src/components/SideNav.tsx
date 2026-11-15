@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useWallet } from "./WalletProvider";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { getOwner, listSubscriptionsFor, formatNear } from "@/lib/contract";
@@ -183,19 +184,101 @@ function useBadges(path: string) {
   return counts;
 }
 
-/** Left sidebar on desktop; becomes a bottom tab bar on phones. */
+const COLLAPSE_KEY = "portwell:nav:collapsed";
+const spring = { type: "spring", stiffness: 420, damping: 36, mass: 0.8 } as const;
+const isDesktop = () => typeof window !== "undefined" && window.matchMedia("(min-width: 901px)").matches;
+
+/**
+ * Left sidebar on desktop (collapsible to icons, with a sliding hover highlight, an active pill and tooltips,
+ * Ctrl/Cmd + B toggles it); a floating bottom tab bar on phones, where the same active pill slides between tabs.
+ */
 export function SideNav() {
   const path = usePathname() ?? "/";
   const counts = useBadges(path);
+  const calm = useReducedMotion();
+  const move = calm ? { duration: 0 } : spring;
+  const [collapsed, setCollapsed] = useState(false);
+  const [hover, setHover] = useState<{ y: number; h: number } | null>(null);
+  const [hovering, setHovering] = useState(false);
+  const [tip, setTip] = useState<{ label: string; x: number; y: number } | null>(null);
+  const navRef = useRef<HTMLElement>(null);
+
+  // Remember the collapsed state between visits.
+  useEffect(() => {
+    try {
+      setCollapsed(window.localStorage.getItem(COLLAPSE_KEY) === "1");
+    } catch {
+      /* storage blocked: stays expanded */
+    }
+  }, []);
+  const toggle = useCallback(() => {
+    setCollapsed((c) => {
+      try {
+        window.localStorage.setItem(COLLAPSE_KEY, c ? "0" : "1");
+      } catch {
+        /* ignore */
+      }
+      return !c;
+    });
+    setTip(null);
+  }, []);
+
+  // Ctrl/Cmd + B, desktop only, and never while typing.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.metaKey || e.ctrlKey) || e.key.toLowerCase() !== "b" || !isDesktop()) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      e.preventDefault();
+      toggle();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [toggle]);
+
+  const enter = (e: React.MouseEvent<HTMLElement> | React.FocusEvent<HTMLElement>, label: string) => {
+    if (!isDesktop()) return;
+    const el = e.currentTarget;
+    setHover({ y: el.offsetTop, h: el.offsetHeight });
+    setHovering(true);
+    if (collapsed) {
+      const r = el.getBoundingClientRect();
+      setTip({ label, x: r.right + 10, y: r.top + r.height / 2 });
+    } else setTip(null);
+  };
+  const leave = () => {
+    setHovering(false);
+    setTip(null);
+  };
+
   return (
-    <nav className="sidenav" aria-label="Main">
+    <nav ref={navRef} className={collapsed ? "sidenav collapsed" : "sidenav"} aria-label="Main" onMouseLeave={leave}>
+      {hover && (
+        <motion.span
+          aria-hidden="true"
+          className="side-hover"
+          initial={false}
+          animate={{ y: hover.y, height: hover.h, opacity: hovering ? 1 : 0 }}
+          transition={{ y: move, height: move, opacity: { duration: 0.15 } }}
+        />
+      )}
       {ITEMS.map((it) => {
         const on = it.match(path);
         const n = it.badge ? counts[it.badge] : 0;
         const text = badgeText(n);
         const name = n > 0 ? `${it.label}, ${text} new` : it.label;
         return (
-          <Link key={it.href} href={it.href} className={on ? "side-item on" : "side-item"} aria-label={name} title={name} aria-current={on ? "page" : undefined}>
+          <Link
+            key={it.href}
+            href={it.href}
+            className={on ? "side-item on" : "side-item"}
+            aria-label={name}
+            title={collapsed ? undefined : name}
+            aria-current={on ? "page" : undefined}
+            onMouseEnter={(e) => enter(e, name)}
+            onFocus={(e) => enter(e, name)}
+          >
+            {on && <motion.span layoutId="side-active-pill" className="side-pill" transition={move} aria-hidden="true" />}
             <span className="side-ico">
               {it.icon}
               {n > 0 && <b className="pulse-dot" aria-hidden="true" />}
@@ -205,6 +288,41 @@ export function SideNav() {
           </Link>
         );
       })}
+
+      <button
+        type="button"
+        className="side-toggle"
+        onClick={toggle}
+        onMouseEnter={(e) => {
+          if (!collapsed || !isDesktop()) return;
+          const r = e.currentTarget.getBoundingClientRect();
+          setHovering(false);
+          setTip({ label: "Expand", x: r.right + 10, y: r.top + r.height / 2 });
+        }}
+        onMouseLeave={() => setTip(null)}
+        aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        <span className="side-ico">
+          {svg(
+            <>
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M9 3v18" />
+            </>,
+          )}
+        </span>
+        <span className="side-label">Collapse</span>
+        <kbd className="side-kbd">Ctrl B</kbd>
+      </button>
+
+      <AnimatePresence>
+        {collapsed && tip && (
+          <div key="tip" className="side-tip-wrap" style={{ left: tip.x, top: tip.y }}>
+            <motion.div className="side-tip" initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
+              {tip.label}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </nav>
   );
 }

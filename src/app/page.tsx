@@ -4,6 +4,7 @@ import { loadCards } from "@/server/posts";
 import { ethosFor } from "@/server/ethos";
 import { xVerifiedFor } from "@/server/blob-store";
 import ScrollImageReveal from "@/components/ScrollImageReveal";
+import { BlurFade } from "@/components/BlurFade";
 
 export const dynamic = "force-dynamic";
 
@@ -35,11 +36,13 @@ export default async function Home() {
       {posts.length === 0 && <p className="muted">No posts yet. Be the first to share one.</p>}
       <FeedPosts posts={posts} />
       {hidden > 0 && <p className="muted">{hidden} post(s) hidden by the scam check.</p>}
+      <BlurFade inView offset={10} duration={0.5}>
       <section className="how" aria-labelledby="how-h">
         <h2 id="how-h">How a payment works</h2>
         <p className="muted">Your payment is held in escrow on NEAR and released to the sharer in four weekly parts. Cancel for a refund of the unreleased weeks, or open a dispute.</p>
         <ScrollImageReveal src="/how-it-works.jpg" alt="Pay the exact price, the contract holds it, four weekly releases to the sharer, refund or dispute" mask="curtain" direction="down" parallax={10} className="sir-frame" />
       </section>
+      </BlurFade>
     </>
   );
 }

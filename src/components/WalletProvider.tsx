@@ -2,11 +2,16 @@
 
 import "@near-wallet-selector/modal-ui/styles.css";
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { setupWalletSelector, type SignedMessage, type WalletSelector } from "@near-wallet-selector/core";
+import { setupWalletSelector, type SignedMessage, type WalletModuleFactory, type WalletSelector } from "@near-wallet-selector/core";
 import type { Buffer } from "buffer";
 import { setupModal, type WalletSelectorModal } from "@near-wallet-selector/modal-ui";
 import { setupMeteorWallet } from "@near-wallet-selector/meteor-wallet";
 import { setupMyNearWallet } from "@near-wallet-selector/my-near-wallet";
+import { setupHereWallet } from "@near-wallet-selector/here-wallet";
+import { setupSender } from "@near-wallet-selector/sender";
+import { setupNightly } from "@near-wallet-selector/nightly";
+import { setupIntearWallet } from "@near-wallet-selector/intear-wallet";
+import { setupBitteWallet } from "@near-wallet-selector/bitte-wallet";
 import { actionCreators } from "@near-js/transactions";
 import { CONTRACT_ID, CONTRACT_CONFIGURED, NETWORK } from "@/lib/config";
 
@@ -43,7 +48,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let sub: { unsubscribe: () => void } | undefined;
     (async () => {
-      const s = await setupWalletSelector({ network: NETWORK, modules: [setupMeteorWallet(), setupMyNearWallet()] });
+      const s = await setupWalletSelector({ network: NETWORK, modules: [setupMeteorWallet(), setupMyNearWallet(), setupHereWallet(), setupSender() as unknown as WalletModuleFactory, setupNightly() as unknown as WalletModuleFactory, setupIntearWallet() as unknown as WalletModuleFactory, setupBitteWallet() as unknown as WalletModuleFactory] });
       setSelector(s);
       setModal(setupModal(s, { contractId: CONTRACT_CONFIGURED ? CONTRACT_ID : `unset.${NETWORK === "mainnet" ? "near" : "testnet"}` }));
       const sync = () => setAccountId(s.store.getState().accounts.find((a) => a.active)?.accountId ?? null);

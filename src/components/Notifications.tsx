@@ -1,5 +1,6 @@
 "use client";
 
+import { BlurFade } from "./BlurFade";
 import Link from "next/link";
 import { Linkify } from "./AccountLink";
 import { PaginationSummary, SearchBar, useListTools } from "./ListTools";
@@ -130,9 +131,9 @@ export function Notifications() {
             </>
           );
           return (
-            <li key={n.id} className="note">
+            <BlurFade as="li" key={n.id} className="note" inView offset={4} duration={0.3}>
               <div>{body}</div>
-            </li>
+            </BlurFade>
           );
         })}
       </ul>

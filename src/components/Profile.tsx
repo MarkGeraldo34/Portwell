@@ -6,6 +6,7 @@ import { useWallet } from "./WalletProvider";
 import { FeedPosts, type FeedPost } from "./FeedPosts";
 import { PaginationSummary } from "./ListTools";
 import { loadBoard } from "@/lib/social";
+import { DeleteRequestButton } from "./DeleteButtons";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { getStats, listSubscriptionsFor } from "@/lib/contract";
 import { buildRows, type Row } from "@/lib/leaderboard";
@@ -20,6 +21,7 @@ interface Req {
   duration: string;
   ts: number;
   offers: number;
+  offerSharers: string[];
 }
 
 const day = (ts: number) => (ts ? new Date(ts).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "");
@@ -78,7 +80,7 @@ export function Profile({ account }: { account: string }) {
         setRequests(
           board
             .filter((b) => b.request.learner === account)
-            .map((b) => ({ id: b.request.id, title: b.request.title, details: b.request.details, budget: b.request.budget, duration: b.request.duration ? formatDuration(b.request.duration) : "", ts: b.request.ts, offers: b.offers.length })),
+            .map((b) => ({ id: b.request.id, title: b.request.title, details: b.request.details, budget: b.request.budget, duration: b.request.duration ? formatDuration(b.request.duration) : "", ts: b.request.ts, offers: b.offers.length, offerSharers: b.offers.map((o) => o.sharer) })),
         );
       })
       .catch(() => live && setRequests([]));
@@ -153,6 +155,11 @@ export function Profile({ account }: { account: string }) {
           <p className="muted" style={{ margin: "8px 0 0", fontSize: 13 }}>
             {day(r.ts)} · {r.offers} {r.offers === 1 ? "offer" : "offers"}
           </p>
+          {me && (
+            <div className="post-foot">
+              <DeleteRequestButton learner={account} id={r.id} offerSharers={r.offerSharers} ts={r.ts} onDeleted={() => setRequests((rs) => (rs ?? []).filter((x) => x.id !== r.id))} />
+            </div>
+          )}
         </article>
       ))}
       {requests !== null && <PaginationSummary paged={{ page: 1, pageCount: 1, from: requests.length ? 1 : 0, to: requests.length, total: requests.length }} noun={requests.length === 1 ? "request" : "requests"} />}

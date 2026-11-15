@@ -1,5 +1,6 @@
 "use client";
 
+import { BlurFade } from "./BlurFade";
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 import { getStats, listSubscriptionsFor } from "@/lib/contract";
@@ -64,8 +65,10 @@ export function FeedPosts({ posts }: { posts: FeedPost[] }) {
     <>
       <SearchBar value={tools.query} onChange={tools.setQuery} placeholder="Search by topic, strategy or sharer name" />
       {tools.searching && tools.filtered.length === 0 && <p className="muted">No strategies match “{tools.query.trim()}”.</p>}
-      {tools.paged.slice.map((p) => (
-        <Post key={p.id} post={p} n={stats?.[p.id]} overall={overall?.[p.sharer]} />
+      {tools.paged.slice.map((p, i) => (
+        <BlurFade key={p.id} inView delay={Math.min(i, 5) * 0.05}>
+          <Post post={p} n={stats?.[p.id]} overall={overall?.[p.sharer]} />
+        </BlurFade>
       ))}
       <PaginationSummary paged={tools.paged} noun={tools.paged.total === 1 ? "strategy" : "strategies"} onPage={tools.setPage} />
     </>

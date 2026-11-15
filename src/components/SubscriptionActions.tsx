@@ -1,5 +1,6 @@
 "use client";
 
+import { BlurFade } from "./BlurFade";
 import { useCallback, useEffect, useState } from "react";
 import { AccountLink } from "./AccountLink";
 import { PaginationSummary, SearchBar } from "./ListTools";
@@ -225,7 +226,7 @@ export function SubscriptionActions() {
   const found = (subs ?? []).filter(matches);
   if (byId && !found.some((x) => x.id === byId.id)) found.unshift(byId);
   const isOwner = owner === accountId;
-  const card = (x: SubscriptionView) => <Row key={x.id} sub={x} me={accountId} isOwner={isOwner} onAct={(a, id) => void act(a, id)} source={pickSource({ sharer: x.sharer, learner: x.learner, startMs: Math.floor(Number(BigInt(x.start_ns) / 1_000_000n)) }, sources.posts, sources.board)} />;
+  const card = (x: SubscriptionView) => <BlurFade key={x.id} inView><Row sub={x} me={accountId} isOwner={isOwner} onAct={(a, id) => void act(a, id)} source={pickSource({ sharer: x.sharer, learner: x.learner, startMs: Math.floor(Number(BigInt(x.start_ns) / 1_000_000n)) }, sources.posts, sources.board)} /></BlurFade>;
 
   // Cards are grouped by your role: tutor (you are the sharer and can claim matured weeks) or learner (you paid).
   const groups: { key: string; title: string; hint: string; mine: (x: SubscriptionView) => boolean }[] = [

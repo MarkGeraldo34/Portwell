@@ -255,9 +255,12 @@ export function RequestBoard({ mode, emails = {} }: { mode: "form" | "list" | "m
                   <DeleteRequestButton learner={c.req.learner} id={c.req.id} offerSharers={c.offers.map((o) => o.sharer)} ts={c.req.ts} onDeleted={() => setCards((cs) => (cs ?? []).filter((x) => !(x.req.learner === c.req.learner && x.req.id === c.req.id)))} />
                 </span>
               ) : c.offers.some((o) => o.sharer === accountId) || sentOffers.includes(id) ? (
-                <p className="offer-done" role="note">
-                  You have offered to teach <b>{c.req.learner}</b> at their <b>{c.req.budget} NEAR</b> budget
-                </p>
+                <>
+                  <p className="offer-done" role="note">
+                    You have offered to teach <b>{c.req.learner}</b> at their <b>{c.req.budget} NEAR</b> budget
+                  </p>
+                  <Link className="btn offer-sub" href={`/requests/${encodeURIComponent(c.req.learner)}/${c.req.id}?sharer=${encodeURIComponent(accountId ?? "")}`}>Open lessons</Link>
+                </>
               ) : offering === id ? (
                 <div className="offer-box">
                   <VerifyX onChange={setOfferX} />

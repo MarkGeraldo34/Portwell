@@ -753,3 +753,5 @@ header nav .row { flex-wrap: nowrap; gap: 6px; }
   .brand-logo { width: 28px; height: 28px; }
   header nav code { max-width: 56px; }
 }
+/* Chat on the request page, under the lessons */
+.lesson-chat { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,.1); }

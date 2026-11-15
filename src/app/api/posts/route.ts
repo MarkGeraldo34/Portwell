@@ -6,8 +6,9 @@ import { hashPost, normalizePost, type PostInput } from "@/lib/post-format";
 import { verifyProof, type Proof } from "@/lib/publish-auth";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { listSubscriptionsFor } from "@/lib/contract";
-import { postLocked } from "@/lib/delete-rules";
+import { postLocked, postTsFromId } from "@/lib/delete-rules";
 import { realDeps } from "@/server/access";
+import { ethosFor } from "@/server/ethos";
 import { blobConfigured, blobProblem, deletePost, getXVerified, listCards, savePost } from "@/server/blob-store";
 
 export const maxDuration = 60; // the AI review can take a while
@@ -88,7 +89,14 @@ export async function GET(req: Request) {
     const mine = (await listCards()).filter((c) => c.sharer === sharer);
     // ?cards=1 returns the public card fields too (the same data the feed already shows). Steps and risks stay gated.
     if (new URL(req.url).searchParams.get("cards") === "1") {
-      return NextResponse.json({ posts: mine.map((c) => c.id), cards: mine.map((c) => ({ id: c.id, sharer: c.sharer, title: c.title, xHandle: c.xHandle, email: c.email, duration: c.duration, mediaCount: c.media.length, ts: c.ts })) });
+      // Same rule as the feed: an X handle counts as verified only if this wallet proved it owns it. Ethos only for those.
+      const proven = (await getXVerified(sharer).catch(() => null))?.handle;
+      const verifiedFor = (h?: string) => !!h && !!proven && proven.toLowerCase() === h.toLowerCase();
+      const ethos = await ethosFor(mine.filter((c) => verifiedFor(c.xHandle)).map((c) => c.xHandle)).catch(() => ({}) as Awaited<ReturnType<typeof ethosFor>>);
+      return NextResponse.json({
+        posts: mine.map((c) => c.id),
+        cards: mine.map((c) => ({ id: c.id, sharer: c.sharer, title: c.title, xHandle: c.xHandle, email: c.email, duration: c.duration, mediaCount: c.media.length, ts: c.ts, verified: verifiedFor(c.xHandle), ethos: c.xHandle && verifiedFor(c.xHandle) ? ethos[c.xHandle.toLowerCase()] : undefined })),
+      });
     }
     return NextResponse.json({ posts: mine.map((c) => c.id) });
   } catch {
@@ -110,8 +118,8 @@ export async function DELETE(req: Request) {
   // A post cannot be deleted while someone is subscribed to its sharer. Fail closed if the chain cannot be read.
   if (CONTRACT_CONFIGURED) {
     try {
-      if (postLocked(await listSubscriptionsFor(proof.accountId), proof.accountId)) {
-        return NextResponse.json({ error: "This post has an active subscriber, so it cannot be deleted until their subscription ends." }, { status: 409 });
+      if (postLocked(await listSubscriptionsFor(proof.accountId), proof.accountId, postTsFromId(body.id))) {
+        return NextResponse.json({ error: "Someone has subscribed to this post, so it can no longer be deleted." }, { status: 409 });
       }
     } catch {
       return NextResponse.json({ error: "Could not check subscriptions right now, so nothing was deleted. Try again." }, { status: 503 });

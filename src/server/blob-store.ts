@@ -371,3 +371,31 @@ export async function chatIncoming(account: string): Promise<{ from: string; ts:
   incomingCache.set(account, { at: Date.now(), v });
   return v;
 }
+
+/** Lessons live at lessons/<sharer>/<learner>/<requestId>/<ts>-<rand>.bin, encrypted. */
+const lessonPrefix = (sharer: string, learner: string, requestId: string) => `lessons/${sharer}/${learner}/${requestId}/`;
+
+export async function saveLesson(sharer: string, learner: string, requestId: string, l: { title: string; body: string }): Promise<{ ts: number }> {
+  const ts = Date.now();
+  await putObj(`${lessonPrefix(sharer, learner, requestId)}${ts}-${Math.random().toString(36).slice(2, 7)}.bin`, seal(key(), JSON.stringify(l)), "text/plain");
+  return { ts };
+}
+
+/** Newest first. Only call after the viewer's chat session token has been checked for this sharer and learner. */
+export async function listLessons(sharer: string, learner: string, requestId: string): Promise<{ title: string; body: string; ts: number }[]> {
+  const objs = await listObjs(lessonPrefix(sharer, learner, requestId), 200);
+  const read = await Promise.all(
+    objs.map(async (o) => {
+      try {
+        const ts = Number(o.pathname.split("/").pop()?.split("-")[0]);
+        const raw = await o.text();
+        const text = raw ? open(key(), raw) : null;
+        const p = text ? (JSON.parse(text) as { title?: unknown; body?: unknown }) : null;
+        return p && Number.isFinite(ts) && typeof p.title === "string" && typeof p.body === "string" ? { title: p.title, body: p.body, ts } : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return read.filter((x): x is { title: string; body: string; ts: number } => x !== null).sort((a, b) => b.ts - a.ts);
+}

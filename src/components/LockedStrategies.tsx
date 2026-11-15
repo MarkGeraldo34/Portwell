@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Buffer } from "buffer";
 import { useWallet } from "./WalletProvider";
 import { VerdictTag } from "./RiskPanel";
@@ -12,6 +12,7 @@ import { formatDuration, type Duration } from "@/lib/duration";
 import { SealedSubscribe } from "./SubscribePanel";
 import type { Verdict } from "@/lib/risk";
 import { APP, RECIPIENT } from "@/lib/unlock";
+import { readOwnPost, saveOwnPost } from "@/lib/own-posts";
 
 interface Teaser {
   id: string;
@@ -38,6 +39,19 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
   const [bump, setBump] = useState(0); // refreshes the public update count after the sharer posts
   const [msg, setMsg] = useState("");
   const [busy, setBusy] = useState(false);
+  // The sharer's own copies, kept in this browser when they published. No wallet signature needed to read them.
+  const [mine, setMine] = useState<Record<string, { steps: string[]; risks: string }>>({});
+  const isSharer = !!accountId && accountId === sharer;
+  useEffect(() => {
+    if (!isSharer || !accountId) return setMine({});
+    const found: Record<string, { steps: string[]; risks: string }> = {};
+    for (const t of teasers) {
+      const c = readOwnPost(accountId, t.id);
+      if (c) found[t.id] = c;
+    }
+    setMine(found);
+  }, [isSharer, accountId, teasers]);
+  const missingOwn = isSharer && teasers.some((t) => !mine[t.id]);
 
   async function unlock() {
     if (!accountId) return signIn();
@@ -63,6 +77,9 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
       if (!res.ok) throw new Error(json.error ?? "Could not unlock");
       setRole(json.reason === "sharer" ? "sharer" : "subscriber");
       setDetails(json.details);
+      if (json.reason === "sharer" && Array.isArray(json.details)) {
+        for (const d of json.details as Detail[]) saveOwnPost(sharer, d.id, { steps: d.steps, risks: d.risks });
+      }
       setUpdates(Array.isArray(json.updates) ? json.updates : []);
       setMsg("");
     } catch (e) {
@@ -75,7 +92,8 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
   return (
     <>
       {teasers.map((t) => {
-        const d = details?.find((x) => x.id === t.id);
+        const own = isSharer ? mine[t.id] : undefined;
+        const d: Detail | undefined = details?.find((x) => x.id === t.id) ?? (own ? { id: t.id, steps: own.steps, risks: own.risks, proofWallet: null } : undefined);
         return (
           <article className={`post risk-${t.risk}`} key={t.id}>
             <div className="post-top">
@@ -102,7 +120,7 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
             {d ? (
               <div className="reader">
                 <div className="reader-head">
-                  <span className={`reader-badge${role === "sharer" ? " mine" : ""}`}>{role === "sharer" ? "Your post · subscriber view" : "Unlocked for you"}</span>
+                  <span className={`reader-badge${role === "sharer" ? " mine" : ""}`}>{role === "sharer" || (own && !details) ? "Your post · subscriber view" : "Unlocked for you"}</span>
                   <p>
                     {role === "sharer"
                       ? "This is exactly what your subscribers read. Keep adding an update for every remaining week of their subscription."
@@ -122,12 +140,18 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
                   <p>{d.risks}</p>
                 </div>
 
-                <p className="reader-proof">
-                  Proof wallet: {d.proofWallet ? <AccountLink account={d.proofWallet} full /> : "none linked yet, so treat this post with extra care"}
-                </p>
+                {(details || !own) && (
+                  <p className="reader-proof">
+                    Proof wallet: {d.proofWallet ? <AccountLink account={d.proofWallet} full /> : "none linked yet, so treat this post with extra care"}
+                  </p>
+                )}
 
-                <h4 className="reader-h">Updates from the sharer</h4>
-                <UpdatesList updates={updates.filter((u) => u.postId === t.id)} />
+                {(details || !own) && (
+                  <>
+                    <h4 className="reader-h">Updates from the sharer</h4>
+                    <UpdatesList updates={updates.filter((u) => u.postId === t.id)} />
+                  </>
+                )}
 
                 {role === "subscriber" && accountId && <ChatBox sharer={sharer} learner={accountId} />}
                 <p className="reader-disclaimer" role="note">This post is not a financial advise but can work if you dyor too</p>
@@ -141,14 +165,16 @@ export function LockedStrategies({ sharer, teasers, media = {} }: { sharer: stri
           </article>
         );
       })}
-      {!details && (
+      {!details && (!isSharer || missingOwn) && (
         <div className="card unlock-card">
           <span className="unlock-kicker">Sealed content</span>
           <p style={{ margin: "6px 0 12px" }}>
-            Steps, risk notes and the proof wallet are shown only to active subscribers. Subscribe above, then sign with your wallet to open them.
+            {isSharer
+              ? "Some of your posts were published on another device or before this feature, so their text is not saved in this browser. Sign once with your wallet to open them here."
+              : "Steps, risk notes and the proof wallet are shown only to active subscribers. Subscribe above, then sign with your wallet to open them."}
           </p>
           <button className="btn" onClick={unlock} disabled={busy}>
-            {accountId ? "Unlock with wallet" : "Connect wallet to unlock"}
+            {accountId ? (isSharer ? "Show my posts" : "Unlock with wallet") : "Connect wallet to unlock"}
           </button>
           {msg && <p className="muted">{msg}</p>}
         </div>

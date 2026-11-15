@@ -6,7 +6,7 @@ import { useWallet } from "./WalletProvider";
 import { proofMessage, RECIPIENT } from "@/lib/proof-message";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { listSubscriptionsFor } from "@/lib/contract";
-import { postLocked, requestLocked } from "@/lib/delete-rules";
+import { postLocked, postTsFromId, requestLocked } from "@/lib/delete-rules";
 import { buildRequestDelete } from "@/lib/social-format";
 import { SOCIAL_CONTRACT, STORAGE_DEPOSIT } from "@/lib/social";
 
@@ -54,12 +54,6 @@ function useLocked(owner: string, check: (subs: Awaited<ReturnType<typeof listSu
   return locked;
 }
 
-const LockedNote = ({ what }: { what: string }) => (
-  <span className="delete-locked" title={`Cannot be deleted while a subscription is active or disputed`}>
-    Subscribed · {what} can&apos;t be deleted
-  </span>
-);
-
 /** Shown only to the account that published the post. The wallet signs the post id (free, no transaction). */
 export function DeletePostButton({ id, sharer }: { id: string; sharer: string }) {
   const { accountId, signMessage } = useWallet();
@@ -67,9 +61,9 @@ export function DeletePostButton({ id, sharer }: { id: string; sharer: string })
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const ref = useRef<HTMLSpanElement>(null);
-  const locked = useLocked(sharer, (subs) => postLocked(subs, sharer));
-  if (!accountId || accountId !== sharer || locked === null) return null;
-  if (locked) return <LockedNote what="post" />;
+  const locked = useLocked(sharer, (subs) => postLocked(subs, sharer, postTsFromId(id)));
+  // Only the sharer sees it, and only until someone has subscribed.
+  if (!accountId || accountId !== sharer || locked !== false) return null;
 
   async function remove() {
     setBusy(true);
@@ -97,13 +91,12 @@ export function DeletePostButton({ id, sharer }: { id: string; sharer: string })
 }
 
 /** Shown only to the learner who made the request. Removes it from NEAR Social DB with one wallet approval. */
-export function DeleteRequestButton({ learner, id, offerSharers, onDeleted }: { learner: string; id: string; offerSharers: string[]; onDeleted: () => void }) {
+export function DeleteRequestButton({ learner, id, offerSharers, ts, onDeleted }: { learner: string; id: string; offerSharers: string[]; ts?: number; onDeleted: () => void }) {
   const { accountId, callTo } = useWallet();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const locked = useLocked(learner, (subs) => requestLocked(subs, learner, offerSharers));
-  if (!accountId || accountId !== learner || locked === null) return null;
-  if (locked) return <LockedNote what="request" />;
+  const locked = useLocked(learner, (subs) => requestLocked(subs, learner, offerSharers, ts));
+  if (!accountId || accountId !== learner || locked !== false) return null;
 
   async function remove() {
     setBusy(true);

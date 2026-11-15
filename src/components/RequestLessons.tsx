@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { AccountLink } from "./AccountLink";
+import { ChatBox } from "./ChatBox";
 import { useWallet } from "./WalletProvider";
 import { CONTRACT_CONFIGURED } from "@/lib/config";
 import { listSubscriptionsFor } from "@/lib/contract";
@@ -160,6 +161,12 @@ export function RequestLessons({ learner, requestId, sharer, offerTs }: { learne
             ))}
           </ul>
         </>
+      )}
+
+      {subscribed && (
+        <div className="lesson-chat">
+          <ChatBox sharer={sharer} learner={learner} />
+        </div>
       )}
     </section>
   );

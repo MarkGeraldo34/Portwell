@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DeleteRequestButton } from "./DeleteButtons";
+import { RequestLessons } from "./RequestLessons";
 import { useWallet } from "./WalletProvider";
 import { AccountLink } from "./AccountLink";
 import { loadBoard } from "@/lib/social";
@@ -178,6 +179,7 @@ export function RequestOffer({ learner, id, sharer }: { learner: string; id: str
       </section>
 
       <BudgetSubscribe req={req} sharer={sharer} offerTs={offer.ts} />
+      <RequestLessons learner={req.learner} requestId={req.id} sharer={sharer} offerTs={offer.ts} />
     </>
   );
 }

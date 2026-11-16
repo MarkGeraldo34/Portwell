@@ -15,7 +15,7 @@ const when = (ts: number) => new Date(ts).toLocaleString(undefined, { day: "nume
  * The working space of one request, on its "View and subscribe" page. After the learner subscribes, the sharer
  * posts the lessons here and the learner reads them here. One wallet signature (free) opens it for an hour.
  */
-export function RequestLessons({ learner, requestId, sharer, offerTs }: { learner: string; requestId: string; sharer: string; offerTs: number }) {
+export function RequestLessons({ learner, requestId, sharer, offerTs, embedded = false }: { learner: string; requestId: string; sharer: string; offerTs: number; embedded?: boolean }) {
   const { accountId, signMessage } = useWallet();
   const me = accountId === sharer ? "sharer" : accountId === learner ? "learner" : null;
   const [subscribed, setSubscribed] = useState<boolean | null>(null);
@@ -108,9 +108,8 @@ export function RequestLessons({ learner, requestId, sharer, offerTs }: { learne
 
   if (!me) return null;
 
-  return (
-    <section className="card lessons" aria-label="Lessons">
-      <h3>{me === "sharer" ? "Your lessons for this request" : "Your lessons"}</h3>
+  const inner = (
+    <>
       {subscribed === null && <p className="muted">Checking the subscription…</p>}
       {subscribed === false && (
         <p className="muted" style={{ margin: 0 }}>
@@ -168,6 +167,23 @@ export function RequestLessons({ learner, requestId, sharer, offerTs }: { learne
           <ChatBox sharer={sharer} learner={learner} />
         </div>
       )}
+    </>
+  );
+
+  // Embedded: the fourth step of the merged request card on the "View and subscribe" page.
+  if (embedded) {
+    return (
+      <section className="req-sec lessons">
+        <span className="sec-label">{me === "sharer" ? "Your lessons and chat" : "Lessons and chat"}</span>
+        {inner}
+      </section>
+    );
+  }
+
+  return (
+    <section className="card lessons" aria-label="Lessons">
+      <h3>{me === "sharer" ? "Your lessons for this request" : "Your lessons"}</h3>
+      {inner}
     </section>
   );
 }

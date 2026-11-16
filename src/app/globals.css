@@ -821,3 +821,14 @@ header nav .row { flex-wrap: nowrap; gap: 6px; }
 /* The halo surface is dark glass, so text colours inside it use the light-on-dark values (same as .card and .post) */
 .halo { --fg: #eef1f7; --muted: #a6afc2; --line: rgba(255,255,255,.14); --link: #6aa2ff; --cyan: #2fd6e8; }
 .flow-body .offer-prompt + .btn, .flow-body .pay-line + .btn { margin-top: 12px; }
+/* Merged card: clear, high-contrast write-ups that do not depend on inherited theme colours */
+.flow .req-details { color: #eef1f7; opacity: 1; font-size: 15px; line-height: 1.55; }
+.flow .post-title { color: #fff; }
+.flow .post-meta-id, .flow .offer-who { color: #8db6ff; }
+.flow .offer-says { color: #eef1f7; font-weight: 600; font-size: 14.5px; line-height: 1.45; }
+.flow .offer-note { color: #c3cadb; font-size: 14px; }
+.flow .muted, .flow [role="status"] { color: #c3cadb; line-height: 1.5; }
+.pay-points { margin: 0 0 12px; padding-left: 18px; display: grid; gap: 6px; font-size: 14.5px; line-height: 1.5; color: #dfe5f2; }
+.pay-points b { color: #fff; }
+.flow .offer-prompt { font-size: 14px; color: #ff8a8a; background: rgba(255,77,77,.12); border-color: rgba(255,77,77,.5); }
+.flow .offer-prompt b { color: #fff; }

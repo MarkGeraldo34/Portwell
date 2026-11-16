@@ -48,7 +48,7 @@ function BudgetSubscribe({ req, sharer, offerTs }: { req: RequestPost; sharer: s
       if (BigInt(approved) !== parseNear(String(req.budget))) throw new Error(`The sharer approved ${formatNear(approved, 4)} NEAR, which is not your ${req.budget} NEAR budget. Do not pay; ask them to offer again.`);
       await call("subscribe_offer", { sharer }, BigInt(approved));
       setSubscribed(true);
-      setMsg("Sent. Your payment is held in escrow and released weekly. The sharer has 24 hours to start posting; if they do not start sharing after 24 hours, click Refund on your subscription. Open My subscriptions (the card icon at the top) and press the refresh icon to see it.");
+      setMsg("Subscribed. Your payment is now held in escrow. Next: the sharer has 24 hours to start posting lessons below. If they have not started after 24 hours, press Refund on your subscription. Find it under My subscriptions (the card icon at the top); press the refresh icon if it is not listed yet.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Transaction failed");
     } finally {
@@ -68,12 +68,15 @@ function BudgetSubscribe({ req, sharer, offerTs }: { req: RequestPost; sharer: s
 
   return (
     <>
-      <p className="pay-line">
-        You pay <b>{req.budget} NEAR</b>{dur ? <> for {dur}</> : null}, held in escrow on NEAR and released to <AccountLink account={sharer} /> in four weekly parts. You can refund the unreleased weeks or open a dispute.
-      </p>
+      <ul className="pay-points">
+        <li><b>You pay {req.budget} NEAR</b>{dur ? <> for {dur}</> : null}. This is your own budget, not the sharer&apos;s usual price.</li>
+        <li>Your money is <b>held in escrow</b> on NEAR. It does not go straight to the sharer.</li>
+        <li>It is released to <AccountLink account={sharer} /> in <b>4 weekly parts</b>.</li>
+        <li>If they do not deliver, you can <b>refund the unreleased weeks</b> or <b>open a dispute</b>.</li>
+      </ul>
       {isLearner && !subscribed && (
         <p className="offer-prompt" role="note">
-          Before you subscribe: email the sharer and wait for their reply. Subscribe on the site only after they have answered.
+          <b>Do this first:</b> email <b>{sharer}</b> and wait for their reply. Press Subscribe only after they have answered.
         </p>
       )}
       {action}

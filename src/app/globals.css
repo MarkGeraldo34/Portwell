@@ -832,3 +832,23 @@ header nav .row { flex-wrap: nowrap; gap: 6px; }
 .pay-points b { color: #fff; }
 .flow .offer-prompt { font-size: 14px; color: #ff8a8a; background: rgba(255,77,77,.12); border-color: rgba(255,77,77,.5); }
 .flow .offer-prompt b { color: #fff; }
+/* One minimal card: topic, offer, subscribe (and lessons) as plain sections with thin dividers */
+.req-one .halo-surface { padding: 20px; }
+.req-sec { padding-top: 16px; margin-top: 16px; border-top: 1px solid rgba(255,255,255,.1); min-width: 0; }
+.req-sec:first-child { padding-top: 0; margin-top: 0; border-top: 0; }
+.sec-label { display: block; margin-bottom: 8px; font-size: 11px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #7fb0ff; }
+.offer-line { margin: 0; font-size: 15px; line-height: 1.5; color: #eef1f7; }
+.offer-line b { color: #fff; }
+.offer-tools { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.offer-note-line { margin: 10px 0 0; font-size: 14px; color: #c3cadb; font-style: italic; }
+.req-one .req-details { color: #eef1f7; opacity: 1; font-size: 15px; line-height: 1.55; }
+.req-one .post-title { color: #fff; }
+.req-one .post-meta-id { color: #8db6ff; }
+.req-one .pay-line { margin: 0 0 12px; font-size: 14.5px; line-height: 1.55; color: #dfe5f2; }
+.req-one .pay-line b { color: #fff; }
+.req-one .offer-prompt { margin: 0 0 12px; font-size: 14px; color: #ff8a8a; background: rgba(255,77,77,.12); border-color: rgba(255,77,77,.5); }
+.req-one .offer-prompt b { color: #fff; }
+.req-one [role="status"], .req-one .muted { color: #c3cadb; line-height: 1.5; }
+.req-one .lesson-form input, .req-one .lesson-form textarea { width: 100%; color: #eef1f7; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); border-radius: 10px; padding: 10px 12px; font: inherit; }
+.req-one .lessons .lesson-chat { margin-top: 14px; padding-top: 12px; }
+@media (max-width: 640px) { .req-one .halo-surface { padding: 14px; } .req-one .post-head { flex-wrap: wrap; } }

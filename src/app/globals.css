@@ -852,3 +852,6 @@ header nav .row { flex-wrap: nowrap; gap: 6px; }
 .req-one .lesson-form input, .req-one .lesson-form textarea { width: 100%; color: #eef1f7; background: rgba(0,0,0,.35); border: 1px solid rgba(255,255,255,.14); border-radius: 10px; padding: 10px 12px; font: inherit; }
 .req-one .lessons .lesson-chat { margin-top: 14px; padding-top: 12px; }
 @media (max-width: 640px) { .req-one .halo-surface { padding: 14px; } .req-one .post-head { flex-wrap: wrap; } }
+/* Lessons in their own glass card, with a gap below the first card */
+.req-lessons-card { margin-top: 16px; }
+.req-lessons-card .lessons .sec-label { margin-bottom: 12px; }

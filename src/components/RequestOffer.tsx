@@ -182,6 +182,9 @@ export function RequestOffer({ learner, id, sharer }: { learner: string; id: str
           <BudgetSubscribe req={req} sharer={sharer} offerTs={offer.ts} />
         </section>
 
+      </HaloCard>
+
+      <HaloCard aria-label="Lessons and chat" className="req-one req-lessons-card">
         <RequestLessons embedded learner={req.learner} requestId={req.id} sharer={sharer} offerTs={offer.ts} />
       </HaloCard>
     </>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DeleteRequestButton } from "./DeleteButtons";
+import { HaloCard } from "./HaloCard";
 import { RequestLessons } from "./RequestLessons";
 import { useWallet } from "./WalletProvider";
 import { AccountLink } from "./AccountLink";
@@ -66,8 +67,7 @@ function BudgetSubscribe({ req, sharer, offerTs }: { req: RequestPost; sharer: s
     );
 
   return (
-    <section className="card" aria-label="Subscribe">
-      <h3>Subscribe</h3>
+    <>
       <p className="pay-line">
         You pay <b>{req.budget} NEAR</b>{dur ? <> for {dur}</> : null}, held in escrow on NEAR and released to <AccountLink account={sharer} /> in four weekly parts. You can refund the unreleased weeks or open a dispute.
       </p>
@@ -78,7 +78,7 @@ function BudgetSubscribe({ req, sharer, offerTs }: { req: RequestPost; sharer: s
       )}
       {action}
       {msg && <p role="status" className="muted" style={{ fontSize: 13, margin: "8px 0 0" }}>{msg}</p>}
-    </section>
+    </>
   );
 }
 
@@ -124,61 +124,79 @@ export function RequestOffer({ learner, id, sharer }: { learner: string; id: str
       <Link className="muted" href={accountId === learner ? "/my-requests" : "/requests"} style={{ fontSize: 13 }}>← Back to requests</Link>
       <h1>View and subscribe</h1>
 
-      <article className="post">
-        <div className="post-head">
-          <span className="avatar" aria-hidden="true">{req.learner[0]?.toUpperCase()}</span>
-          <div className="post-id">
-            <h3 className="post-title">{req.title}</h3>
-            <span className="post-meta-id">
-              Request by <AccountLink account={req.learner} />
-            </span>
-          </div>
-          <div className="budget">
-            <b>{req.budget}</b>
-            <span>NEAR budget</span>
-            {req.duration && <span className="duration-chip">for {formatDuration(req.duration)}</span>}
-          </div>
-        </div>
-        {req.details && <p className="req-details">{req.details}</p>}
-        {accountId === req.learner && (
-          <div className="post-foot">
-            <span className="req-actions">
-              <span className="muted" style={{ fontSize: 13 }}>Your request</span>
-              <DeleteRequestButton learner={req.learner} id={req.id} offerSharers={offerSharers} ts={req.ts} onDeleted={() => router.push("/my-requests")} />
-            </span>
-          </div>
-        )}
-      </article>
-
-      <section className="card" aria-label="The offer">
-        <h3>Offer to teach you</h3>
-        <ul className="offers">
-          <li>
-            <span className="offer-who"><AccountLink account={offer.sharer} /></span>
-            <span className="offer-says">has accepted your budget and offered to teach you</span>
-            {xHandle ? (
-              <a className="contact-btn" href={`https://x.com/${encodeURIComponent(xHandle)}`} target="_blank" rel="noopener noreferrer nofollow" aria-label={`@${xHandle} on X, verified`} title={`@${xHandle} on X, verified`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/x-logo.png" alt="" width={18} height={18} />
-                <span className="xv-tick" aria-hidden="true">✓</span>
-              </a>
-            ) : (
-              <span className="contact-btn unverified" title="This sharer has not proven they own an X account. Be careful.">
-                <span aria-hidden="true">⚠</span> Unverified X
-              </span>
-            )}
-            {offer.note && <span className="offer-note">“{offer.note}”</span>}
-            {addr && (
-              <a className="contact-btn" href={mailLink(addr).href} target={mailLink(addr).webmail ? "_blank" : undefined} rel="noopener noreferrer nofollow" aria-label={`Email @${offer.sharer}`} title={`Email ${addr}`}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/gmail-logo.png" alt="" width={18} height={18} />
-              </a>
-            )}
+      <HaloCard aria-label="Request, offer and subscription" className="req-flow">
+        <ol className="flow">
+          <li className="flow-step">
+            <span className="flow-dot" aria-hidden="true">1</span>
+            <div className="flow-body">
+              <span className="flow-kicker">The topic</span>
+              <div className="post-head">
+                <span className="avatar" aria-hidden="true">{req.learner[0]?.toUpperCase()}</span>
+                <div className="post-id">
+                  <h3 className="post-title">{req.title}</h3>
+                  <span className="post-meta-id">
+                    Request by <AccountLink account={req.learner} />
+                  </span>
+                </div>
+                <div className="budget">
+                  <b>{req.budget}</b>
+                  <span>NEAR budget</span>
+                  {req.duration && <span className="duration-chip">for {formatDuration(req.duration)}</span>}
+                </div>
+              </div>
+              {req.details && <p className="req-details">{req.details}</p>}
+              {accountId === req.learner && (
+                <div className="post-foot">
+                  <span className="req-actions">
+                    <span className="muted" style={{ fontSize: 13 }}>Your request</span>
+                    <DeleteRequestButton learner={req.learner} id={req.id} offerSharers={offerSharers} ts={req.ts} onDeleted={() => router.push("/my-requests")} />
+                  </span>
+                </div>
+              )}
+            </div>
           </li>
-        </ul>
-      </section>
 
-      <BudgetSubscribe req={req} sharer={sharer} offerTs={offer.ts} />
+          <li className="flow-step">
+            <span className="flow-dot" aria-hidden="true">2</span>
+            <div className="flow-body">
+              <span className="flow-kicker">Offer to teach you</span>
+              <ul className="offers">
+                <li>
+                  <span className="offer-who"><AccountLink account={offer.sharer} /></span>
+                  <span className="offer-says">has accepted your budget and offered to teach you</span>
+                  {xHandle ? (
+                    <a className="contact-btn" href={`https://x.com/${encodeURIComponent(xHandle)}`} target="_blank" rel="noopener noreferrer nofollow" aria-label={`@${xHandle} on X, verified`} title={`@${xHandle} on X, verified`}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/x-logo.png" alt="" width={18} height={18} />
+                      <span className="xv-tick" aria-hidden="true">✓</span>
+                    </a>
+                  ) : (
+                    <span className="contact-btn unverified" title="This sharer has not proven they own an X account. Be careful.">
+                      <span aria-hidden="true">⚠</span> Unverified X
+                    </span>
+                  )}
+                  {offer.note && <span className="offer-note">“{offer.note}”</span>}
+                  {addr && (
+                    <a className="contact-btn" href={mailLink(addr).href} target={mailLink(addr).webmail ? "_blank" : undefined} rel="noopener noreferrer nofollow" aria-label={`Email @${offer.sharer}`} title={`Email ${addr}`}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src="/gmail-logo.png" alt="" width={18} height={18} />
+                    </a>
+                  )}
+                </li>
+              </ul>
+            </div>
+          </li>
+
+          <li className="flow-step">
+            <span className="flow-dot" aria-hidden="true">3</span>
+            <div className="flow-body">
+              <span className="flow-kicker">Subscribe</span>
+              <BudgetSubscribe req={req} sharer={sharer} offerTs={offer.ts} />
+            </div>
+          </li>
+        </ol>
+      </HaloCard>
+
       <RequestLessons learner={req.learner} requestId={req.id} sharer={sharer} offerTs={offer.ts} />
     </>
   );

@@ -173,7 +173,7 @@ export function RequestLessons({ learner, requestId, sharer, offerTs, embedded =
   // Embedded: the fourth step of the merged request card on the "View and subscribe" page.
   if (embedded) {
     return (
-      <section className="req-sec lessons">
+      <section className="lessons">
         <span className="sec-label">{me === "sharer" ? "Your lessons and chat" : "Lessons and chat"}</span>
         {inner}
       </section>

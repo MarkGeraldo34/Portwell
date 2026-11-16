@@ -800,3 +800,24 @@ header nav .row { flex-wrap: nowrap; gap: 6px; }
 @media (prefers-reduced-motion: reduce) {
   :is(.card, .post, .note > div):not(.card .card):not(.post .card):is(:hover, :focus-within)::after { animation: none; }
 }
+/* Merged request / offer / subscribe card: three numbered steps on one rail */
+.req-flow .halo-surface { padding: 20px; }
+.flow { list-style: none; margin: 0; padding: 0; }
+.flow-step { position: relative; display: grid; grid-template-columns: 34px minmax(0, 1fr); column-gap: 16px; padding-bottom: 26px; }
+.flow-step:last-child { padding-bottom: 0; }
+.flow-step:not(:last-child)::before { content: ""; position: absolute; left: 16px; top: 38px; bottom: 4px; width: 2px; border-radius: 2px; background: linear-gradient(to bottom, rgba(106,162,255,.55), rgba(106,162,255,.12)); }
+.flow-dot { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: #fff; background: linear-gradient(135deg, #d92f54, #3b78ff); box-shadow: 0 0 0 4px rgba(59,120,255,.16); }
+.flow-body { min-width: 0; }
+.flow-body > .post-head { margin-top: 2px; }
+.flow-kicker { display: block; margin: 7px 0 10px; font-size: 12px; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; color: #7fb0ff; }
+.flow-body .offers { margin-top: 0; }
+@media (max-width: 640px) {
+  .req-flow .halo-surface { padding: 14px; }
+  .flow-step { grid-template-columns: 28px minmax(0, 1fr); column-gap: 12px; }
+  .flow-dot { width: 28px; height: 28px; font-size: 13px; }
+  .flow-step:not(:last-child)::before { left: 13px; top: 32px; }
+  .flow-body > .post-head { flex-wrap: wrap; }
+}
+/* The halo surface is dark glass, so text colours inside it use the light-on-dark values (same as .card and .post) */
+.halo { --fg: #eef1f7; --muted: #a6afc2; --line: rgba(255,255,255,.14); --link: #6aa2ff; --cyan: #2fd6e8; }
+.flow-body .offer-prompt + .btn, .flow-body .pay-line + .btn { margin-top: 12px; }
